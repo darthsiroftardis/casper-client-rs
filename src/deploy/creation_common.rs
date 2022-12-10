@@ -9,6 +9,8 @@ use casper_client::cli::{json_args_help, simple_args_help, PaymentStrParams, Ses
 
 use crate::common;
 
+const SESSION_ARG_GROUP: &str = "session-args";
+
 /// This struct defines the order in which the args are shown for this subcommand's help message.
 pub(super) enum DisplayOrder {
     ShowSimpleArgExamples,
@@ -579,12 +581,19 @@ pub(super) mod standard_payment_amount {
 
 pub(super) fn apply_common_creation_options(
     subcommand: Command,
+    require_secret_key: bool,
     include_node_address: bool,
 ) -> Command {
     let mut subcommand = subcommand
         .next_line_help(true)
         .arg(show_simple_arg_examples::arg())
-        .arg(show_json_args_examples::arg());
+        .arg(show_json_args_examples::arg())
+        .group(
+            // Ensure these two forms of outputting extended help are mutually exclusive.
+            ArgGroup::new("show-examples")
+                .arg(show_simple_arg_examples::ARG_NAME)
+                .arg(show_json_args_examples::ARG_NAME),
+        );
 
     if include_node_address {
         subcommand = subcommand.arg(
@@ -594,87 +603,121 @@ pub(super) fn apply_common_creation_options(
         );
     }
 
-    subcommand = subcommand
-        .arg(
-            common::secret_key::arg(DisplayOrder::SecretKey as usize)
-                .required_unless_present(show_simple_arg_examples::ARG_NAME)
-                .required_unless_present(show_json_args_examples::ARG_NAME),
+    let secret_key_arg = if require_secret_key {
+        common::secret_key::arg(DisplayOrder::SecretKey as usize, "")
+            .required_unless_present(show_simple_arg_examples::ARG_NAME)
+            .required_unless_present(show_json_args_examples::ARG_NAME)
+    } else {
+        common::secret_key::arg(
+            DisplayOrder::SecretKey as usize,
+            ". If not provided, the deploy will not be signed and will remain invalid until \
+            signed, for example by running the `sign-deploy` subcommand.",
         )
+    };
+
+    subcommand = subcommand
+        .arg(secret_key_arg)
         .arg(timestamp::arg())
         .arg(ttl::arg())
         .arg(chain_name::arg())
-        .arg(common::session_account::arg(
-            DisplayOrder::SessionAccount as usize,
-        ));
+        .arg(session_account::arg(DisplayOrder::SessionAccount as usize));
     subcommand
 }
 
 pub(super) fn apply_common_session_options(subcommand: Command) -> Command {
     subcommand
-        .arg(session_path::arg())
-        .arg(session_package_hash::arg())
-        .arg(session_package_name::arg())
-        .arg(is_session_transfer::arg())
-        .arg(session_hash::arg())
-        .arg(session_name::arg())
         .arg(arg_simple::session::arg())
         .arg(args_json::session::arg())
         .arg(args_complex::session::arg())
-        // Group the session-arg args so only one style is used to ensure consistent ordering.
         .group(
-            ArgGroup::new("session-args")
+            // Ensure these three forms of inputting session-args are mutually exclusive.
+            ArgGroup::new(SESSION_ARG_GROUP)
                 .arg(arg_simple::session::ARG_NAME)
                 .arg(args_json::session::ARG_NAME)
                 .arg(args_complex::session::ARG_NAME)
                 .required(false),
         )
+        .arg(is_session_transfer::arg())
+        .arg(session_path::arg())
         .arg(session_entry_point::arg())
+        .arg(session_hash::arg())
+        .arg(session_name::arg())
         .arg(session_version::arg())
+        .arg(session_package_hash::arg())
+        .arg(session_package_name::arg())
         .group(
+            // Ensure these six forms of inputting the session are mutually exclusive.
             ArgGroup::new("session")
-                .arg(session_path::ARG_NAME)
-                .arg(session_package_hash::ARG_NAME)
-                .arg(session_package_name::ARG_NAME)
                 .arg(is_session_transfer::ARG_NAME)
+                .arg(session_path::ARG_NAME)
                 .arg(session_hash::ARG_NAME)
                 .arg(session_name::ARG_NAME)
+                .arg(session_package_hash::ARG_NAME)
+                .arg(session_package_name::ARG_NAME)
+                .required(false),
+        )
+        .group(
+            // This group duplicates all the args in the "session" and "show-examples" groups, but
+            // ensures at least one of them are provided.
+            ArgGroup::new("session-and-show-examples")
+                .arg(is_session_transfer::ARG_NAME)
+                .arg(session_path::ARG_NAME)
+                .arg(session_hash::ARG_NAME)
+                .arg(session_name::ARG_NAME)
+                .arg(session_package_hash::ARG_NAME)
+                .arg(session_package_name::ARG_NAME)
                 .arg(show_simple_arg_examples::ARG_NAME)
                 .arg(show_json_args_examples::ARG_NAME)
+                .multiple(true)
                 .required(true),
         )
 }
 
 pub(crate) fn apply_common_payment_options(subcommand: Command) -> Command {
     subcommand
-        .arg(standard_payment_amount::arg())
-        .arg(payment_path::arg())
-        .arg(payment_package_hash::arg())
-        .arg(payment_package_name::arg())
-        .arg(payment_hash::arg())
-        .arg(payment_name::arg())
         .arg(arg_simple::payment::arg())
         .arg(args_json::payment::arg())
         .arg(args_complex::payment::arg())
-        // Group the payment-arg args so only one style is used to ensure consistent ordering.
         .group(
+            // Ensure these three forms of inputting payment-args are mutually exclusive.
             ArgGroup::new("payment-args")
                 .arg(arg_simple::payment::ARG_NAME)
                 .arg(args_json::payment::ARG_NAME)
                 .arg(args_complex::payment::ARG_NAME)
                 .required(false),
         )
+        .arg(standard_payment_amount::arg())
+        .arg(payment_path::arg())
         .arg(payment_entry_point::arg())
+        .arg(payment_hash::arg())
+        .arg(payment_name::arg())
         .arg(payment_version::arg())
+        .arg(payment_package_hash::arg())
+        .arg(payment_package_name::arg())
         .group(
+            // Ensure these six forms of inputting the payment are mutually exclusive.
             ArgGroup::new("payment")
                 .arg(standard_payment_amount::ARG_NAME)
                 .arg(payment_path::ARG_NAME)
-                .arg(payment_package_hash::ARG_NAME)
-                .arg(payment_package_name::ARG_NAME)
                 .arg(payment_hash::ARG_NAME)
                 .arg(payment_name::ARG_NAME)
+                .arg(payment_package_hash::ARG_NAME)
+                .arg(payment_package_name::ARG_NAME)
+                .required(false),
+        )
+        .group(
+            // This group duplicates all the args in the "payment" and "show-examples" groups, but
+            // ensures at least one of them are provided.
+            ArgGroup::new("payment-and-show-examples")
+                .arg(standard_payment_amount::ARG_NAME)
+                .arg(payment_path::ARG_NAME)
+                .arg(payment_hash::ARG_NAME)
+                .arg(payment_name::ARG_NAME)
+                .arg(payment_package_hash::ARG_NAME)
+                .arg(payment_package_name::ARG_NAME)
                 .arg(show_simple_arg_examples::ARG_NAME)
                 .arg(show_json_args_examples::ARG_NAME)
+                .multiple(true)
                 .required(true),
         )
 }
@@ -744,6 +787,66 @@ pub(super) mod input {
     }
 }
 
+pub(super) mod session_account {
+    use super::*;
+    use casper_client::cli::CliError;
+
+    pub const ARG_NAME: &str = "session-account";
+    const ARG_VALUE_NAME: &str = "FORMATTED STRING or PATH";
+    const ARG_HELP: &str =
+        "The hex-encoded public key of the account context under which the session code will be \
+        executed. This must be a properly formatted public key. The public key may instead be read \
+        in from a file, in which case enter the path to the file as the --session-account \
+        argument. The file should be one of the two public key files generated via the `keygen` \
+        subcommand; \"public_key_hex\" or \"public_key.pem\".  If not provided, the public key of \
+        the account will be derived from the key passed via --secret-key";
+
+    pub fn arg(order: usize) -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required_unless_present_any([
+                common::secret_key::ARG_NAME,
+                show_simple_arg_examples::ARG_NAME,
+                show_json_args_examples::ARG_NAME,
+            ])
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(order)
+    }
+
+    pub fn get(matches: &ArgMatches) -> Result<String, CliError> {
+        let value = matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default();
+        common::public_key::try_read_from_file(value)
+    }
+}
+
+pub(super) mod is_session_transfer {
+    use super::*;
+
+    pub const ARG_NAME: &str = "is-session-transfer";
+    const ARG_HELP: &str = "Use this flag if you want to make this a transfer.";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .action(ArgAction::SetTrue)
+            .help(ARG_HELP)
+            .required(false)
+            .requires(SESSION_ARG_GROUP)
+            .display_order(DisplayOrder::SessionTransfer as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> bool {
+        matches
+            .get_one::<bool>(ARG_NAME)
+            .copied()
+            .unwrap_or_default()
+    }
+}
+
 pub(super) mod session_hash {
     use super::*;
 
@@ -771,7 +874,9 @@ pub(super) mod session_name {
 
     pub const ARG_NAME: &str = "session-name";
     const ARG_VALUE_NAME: &str = "NAME";
-    const ARG_HELP: &str = "Name of the stored contract (associated with the executing account) to be called as the session";
+    const ARG_HELP: &str =
+        "Name of the stored contract (associated with the executing account) to be called as the \
+        session";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -785,29 +890,6 @@ pub(super) mod session_name {
 
     pub fn get(matches: &ArgMatches) -> Option<&str> {
         matches.get_one::<String>(ARG_NAME).map(String::as_str)
-    }
-}
-
-pub(super) mod is_session_transfer {
-    use super::*;
-
-    pub const ARG_NAME: &str = "is-session-transfer";
-    const ARG_HELP: &str = "Use this flag if you want to make this a transfer.";
-
-    pub fn arg() -> Arg {
-        Arg::new(ARG_NAME)
-            .long(ARG_NAME)
-            .action(ArgAction::SetTrue)
-            .help(ARG_HELP)
-            .required(false)
-            .display_order(DisplayOrder::SessionTransfer as usize)
-    }
-
-    pub fn get(matches: &ArgMatches) -> bool {
-        matches
-            .get_one::<bool>(ARG_NAME)
-            .copied()
-            .unwrap_or_default()
     }
 }
 
@@ -884,7 +966,8 @@ pub(super) mod session_version {
 
     pub const ARG_NAME: &str = "session-version";
     const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
-    const ARG_HELP: &str = "Version of the called session contract. Latest will be used by default";
+    const ARG_HELP: &str =
+        "Version of the called session contract. Latest will be used if not provided";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -930,8 +1013,9 @@ pub(super) mod payment_name {
 
     pub const ARG_NAME: &str = "payment-name";
     const ARG_VALUE_NAME: &str = "NAME";
-    const ARG_HELP: &str = "Name of the stored contract (associated with the executing account) \
-    to be called as the payment";
+    const ARG_HELP: &str =
+        "Name of the stored contract (associated with the executing account) to be called as the \
+        payment";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -1021,7 +1105,8 @@ pub(super) mod payment_version {
 
     pub const ARG_NAME: &str = "payment-version";
     const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
-    const ARG_HELP: &str = "Version of the called payment contract. Latest will be used by default";
+    const ARG_HELP: &str =
+        "Version of the called payment contract. Latest will be used if not provided";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)

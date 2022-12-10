@@ -29,7 +29,7 @@ impl ClientCommand for MakeTransfer {
                 true,
             ));
         let subcommand = creation_common::apply_common_payment_options(subcommand);
-        creation_common::apply_common_creation_options(subcommand, false)
+        creation_common::apply_common_creation_options(subcommand, false, false)
     }
 
     async fn run(matches: &ArgMatches) -> Result<Success, CliError> {
@@ -40,7 +40,7 @@ impl ClientCommand for MakeTransfer {
         let target_account = transfer::target_account::get(matches);
         let transfer_id = transfer::transfer_id::get(matches);
 
-        let secret_key = common::secret_key::get(matches);
+        let secret_key = common::secret_key::get(matches).unwrap_or_default();
         let timestamp = creation_common::timestamp::get(matches);
         let ttl = creation_common::ttl::get(matches);
         let chain_name = creation_common::chain_name::get(matches);
@@ -48,7 +48,7 @@ impl ClientCommand for MakeTransfer {
         let payment_str_params = creation_common::payment_str_params(matches);
 
         let maybe_output_path = creation_common::output::get(matches).unwrap_or_default();
-        let session_account = common::session_account::get(matches)?;
+        let session_account = creation_common::session_account::get(matches)?;
         let force = common::force::get(matches);
 
         casper_client::cli::make_transfer(
