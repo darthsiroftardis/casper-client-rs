@@ -9,6 +9,7 @@ pub use super::v1_5_0::get_chainspec::{ChainspecRawBytes, GetChainspecResult};
 pub use super::v1_5_0::get_deploy::GetDeployResult;
 pub use super::v1_5_0::get_dictionary_item::GetDictionaryItemResult;
 pub use super::v1_5_0::get_era_info::{EraSummary, GetEraInfoResult};
+pub use super::v1_5_0::get_era_summary::GetEraSummaryResult;
 pub use super::v1_5_0::get_node_status::{
     ActivationPoint, AvailableBlockRange, GetNodeStatusResult, MinimalBlockInfo, NextUpgrade,
     ReactorState,
@@ -26,3 +27,4 @@ pub use super::v1_5_0::list_rpcs::{
 pub use super::v1_5_0::put_deploy::PutDeployResult;
 pub use super::v1_5_0::query_balance::QueryBalanceResult;
 pub use super::v1_5_0::query_global_state::QueryGlobalStateResult;
+pub use super::v1_5_0::speculative_exec::SpeculativeExecResult;

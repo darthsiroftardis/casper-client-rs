@@ -54,8 +54,8 @@ untrusted = "0.9.0"
 vergen = { version = "7", default-features = false, features = ["git"] }
 
 [patch.crates-io]
-casper-hashing = { git = "https://github.com/casper-network/casper-node", branch = "feat-fast-sync-v2" }
-casper-types = { git = "https://github.com/casper-network/casper-node", branch = "feat-fast-sync-v2" }
+casper-hashing = { git = "https://github.com/casper-network/casper-node", branch = "release-1.5.0-rc.1" }
+casper-types = { git = "https://github.com/casper-network/casper-node", branch = "release-1.5.0-rc.1" }
 
 [package.metadata.deb]
 features = ["vendored-openssl"]
