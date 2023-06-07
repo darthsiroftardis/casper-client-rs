@@ -274,3 +274,8 @@ fn should_fail_to_create_transfer_with_bad_args() {
         })
     ));
 }
+
+#[test]
+fn should_create_deploy_with_no_secret_key() {
+
+}
