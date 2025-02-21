@@ -484,7 +484,7 @@ pub(super) mod pricing_mode {
 
     const ARG_VALUE_NAME: &str = "classic|reserved|fixed";
     const ARG_HELP: &str = "Used to identify the payment mode chosen to execute the transaction";
-    const ARG_DEFAULT: &str = PricingMode::FIXED;
+    const ARG_DEFAULT: &str = PricingMode::CLASSIC;
 
     pub(in crate::transaction) fn arg() -> Arg {
         Arg::new(ARG_NAME)
