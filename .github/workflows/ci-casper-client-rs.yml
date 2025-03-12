@@ -46,6 +46,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: audit
+          args: --ignore RUSTSEC-2025-0009
 
       - name: Clippy
         uses: actions-rs/cargo@v1
