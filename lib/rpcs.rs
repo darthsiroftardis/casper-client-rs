@@ -19,5 +19,3 @@ pub use v2_0_0::{
     query_balance::PurseIdentifier,
     query_global_state::GlobalStateIdentifier,
 };
-
-pub use v1_6_0::get_account::AccountIdentifier;
