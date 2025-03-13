@@ -8,11 +8,20 @@ use crate::{command::ClientCommand, common, Success};
 
 pub struct MakeDeploy;
 
+static DEPRECATION_WARNING: &str = r#"
+#################################### WARNING ####################################
+#                                                                               #
+#       make-deploy subcommand is deprecated in favor of make-transaction       #
+#                    and will be removed in a future release                    #
+#                                                                               #
+#################################################################################
+"#;
+
 #[async_trait]
 impl ClientCommand for MakeDeploy {
     const NAME: &'static str = "make-deploy";
     const ABOUT: &'static str =
-        "Create a deploy and output it to a file or stdout. As a file, the deploy can subsequently \
+        "[DEPRECATED: use `make-transaction` instead] Create a deploy and output it to a file or stdout. As a file, the deploy can subsequently \
         be signed by other parties using the 'sign-deploy' subcommand and then sent to the network \
         for execution using the 'send-deploy' subcommand";
 
@@ -24,6 +33,7 @@ impl ClientCommand for MakeDeploy {
                 creation_common::DisplayOrder::Force as usize,
                 true,
             ))
+            .arg(creation_common::gas_price::arg())
             .display_order(display_order);
         let subcommand = creation_common::apply_common_session_options(subcommand);
         let subcommand = creation_common::apply_common_payment_options(subcommand, None);
@@ -31,8 +41,12 @@ impl ClientCommand for MakeDeploy {
     }
 
     async fn run(matches: &ArgMatches) -> Result<Success, CliError> {
+        // show deprecation warning for each use of `put-deploy` subcommand
+        println!("{DEPRECATION_WARNING}");
+
         creation_common::show_simple_arg_examples_and_exit_if_required(matches);
         creation_common::show_json_args_examples_and_exit_if_required(matches);
+        let gas_price = creation_common::gas_price::get(matches);
 
         let secret_key = common::secret_key::get(matches).unwrap_or_default();
         let timestamp = creation_common::timestamp::get(matches);
@@ -55,6 +69,7 @@ impl ClientCommand for MakeDeploy {
                 ttl,
                 chain_name,
                 session_account: &session_account,
+                gas_price_tolerance: gas_price,
             },
             session_str_params,
             payment_str_params,

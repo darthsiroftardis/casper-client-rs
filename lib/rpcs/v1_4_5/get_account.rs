@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use casper_types::{ProtocolVersion, PublicKey};
+use casper_types::{account::Account, ProtocolVersion, PublicKey};
 
-use crate::{rpcs::common::BlockIdentifier, types::Account};
+use crate::rpcs::common::BlockIdentifier;
 
 pub(crate) const GET_ACCOUNT_METHOD: &str = "state_get_account_info";
 
@@ -16,7 +16,8 @@ pub(crate) struct GetAccountParams {
 }
 
 impl GetAccountParams {
-    //This clippy lint should be re-enabled once the client is updated to handle multiple different node versions.
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
     #[allow(dead_code)]
     pub(crate) fn new(public_key: PublicKey, block_identifier: Option<BlockIdentifier>) -> Self {
         GetAccountParams {

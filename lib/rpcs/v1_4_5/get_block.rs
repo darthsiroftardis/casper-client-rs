@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use casper_types::ProtocolVersion;
+use casper_types::{Block, ProtocolVersion};
 
-use crate::{rpcs::common::BlockIdentifier, types::Block};
+use crate::rpcs::common::BlockIdentifier;
 
 pub(crate) const GET_BLOCK_METHOD: &str = "chain_get_block";
 

@@ -1,12 +1,265 @@
+//! Functions facilitating sending of [`Deploy`]s to the network
+
 use casper_types::{
-    account::AccountHash, AsymmetricType, PublicKey, SecretKey, UIntParseError, URef, U512,
+    account::AccountHash, AsymmetricType, Deploy, PublicKey, TransferTarget, UIntParseError, URef,
+    U512,
 };
 
-use super::{parse, CliError, DeployStrParams, PaymentStrParams, SessionStrParams};
-use crate::{
-    types::{Deploy, DeployBuilder, MAX_SERIALIZED_SIZE_OF_DEPLOY},
-    TransferTarget,
+use super::{
+    parse, transaction::get_maybe_secret_key, CliError, DeployStrParams, PaymentStrParams,
+    SessionStrParams,
 };
+use crate::{
+    cli::DeployBuilder,
+    rpcs::results::{PutDeployResult, SpeculativeExecResult},
+    SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY,
+};
+
+const DEFAULT_GAS_PRICE: u64 = 1;
+
+/// Creates a [`Deploy`] and sends it to the network for execution.
+///
+/// For details of the parameters, see [the module docs](crate::cli#common-parameters) or the docs
+/// of the individual parameter types.
+pub async fn put_deploy(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    deploy_params: DeployStrParams<'_>,
+    session_params: SessionStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+) -> Result<SuccessResponse<PutDeployResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
+    #[allow(deprecated)]
+    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Creates a [`Deploy`] and sends it to the specified node for speculative execution.
+///
+/// For details of the parameters, see [the module docs](crate::cli#common-parameters) or the docs
+/// of the individual parameter types.
+pub async fn speculative_put_deploy(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    deploy_params: DeployStrParams<'_>,
+    session_params: SessionStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
+    #[allow(deprecated)]
+    crate::speculative_exec(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Returns a [`Deploy`] and outputs it to a file or stdout if the `std-fs-io` feature is enabled.
+///
+/// As a file, the `Deploy` can subsequently be signed by other parties using [`sign_deploy_file`]
+/// and then sent to the network for execution using [`send_deploy_file`].
+///
+/// If the `std-fs-io` feature is NOT enabled, `maybe_output_path` and `force` are ignored.
+/// Otherwise, `maybe_output_path` specifies the output file path, or if empty, will print it to
+/// `stdout`.  If `force` is true, and a file exists at `maybe_output_path`, it will be
+/// overwritten.  If `force` is false and a file exists at `maybe_output_path`,
+/// [`crate::Error::FileAlreadyExists`] is returned and the file will not be written.
+pub fn make_deploy(
+    #[allow(unused_variables)] maybe_output_path: &str,
+    deploy_params: DeployStrParams<'_>,
+    session_params: SessionStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+    #[allow(unused_variables)] force: bool,
+) -> Result<Deploy, CliError> {
+    let deploy = with_payment_and_session(deploy_params, payment_params, session_params, true)?;
+    #[cfg(feature = "std-fs-io")]
+    {
+        let output = parse::output_kind(maybe_output_path, force);
+        #[allow(deprecated)]
+        crate::output_deploy(output, &deploy).map_err(CliError::from)?;
+    }
+    Ok(deploy)
+}
+
+/// Reads a previously-saved [`Deploy`] from a file, cryptographically signs it, and outputs it to a
+/// file or stdout.
+///
+/// `maybe_output_path` specifies the output file path, or if empty, will print it to `stdout`.  If
+/// `force` is true, and a file exists at `maybe_output_path`, it will be overwritten.  If `force`
+/// is false and a file exists at `maybe_output_path`, [`crate::Error::FileAlreadyExists`] is returned
+/// and the file will not be written.
+#[cfg(feature = "std-fs-io")]
+pub fn sign_deploy_file(
+    input_path: &str,
+    secret_key_path: &str,
+    maybe_output_path: &str,
+    force: bool,
+) -> Result<(), CliError> {
+    let secret_key = parse::secret_key_from_file(secret_key_path)?;
+    let output = parse::output_kind(maybe_output_path, force);
+    #[allow(deprecated)]
+    crate::sign_deploy_file(input_path, &secret_key, output).map_err(CliError::from)
+}
+
+/// Reads a previously-saved [`Deploy`] from a file and sends it to the network for execution.
+///
+/// For details of the parameters, see [the module docs](crate::cli#common-parameters).
+#[cfg(feature = "std-fs-io")]
+pub async fn send_deploy_file(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    input_path: &str,
+) -> Result<SuccessResponse<PutDeployResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    #[allow(deprecated)]
+    let deploy = crate::read_deploy_file(input_path)?;
+    #[allow(deprecated)]
+    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Reads a previously-saved [`Deploy`] from a file and sends it to the specified node for
+/// speculative execution.
+/// For details of the parameters, see [the module docs](crate::cli#common-parameters).
+#[cfg(feature = "std-fs-io")]
+pub async fn speculative_send_deploy_file(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    input_path: &str,
+) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    #[allow(deprecated)]
+    let deploy = crate::read_deploy_file(input_path)?;
+    #[allow(deprecated)]
+    crate::speculative_exec(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Transfers funds between purses.
+///
+/// * `amount` is a string to be parsed as a `U512` specifying the amount to be transferred.
+/// * `target_account` is the [`AccountHash`], [`URef`] or [`PublicKey`] of the account to which the
+///   funds will be transferred, formatted as a hex-encoded string.  The account's main purse will
+///   receive the funds.
+/// * `transfer_id` is a string to be parsed as a `u64` representing a user-defined identifier which
+///   will be permanently associated with the transfer.
+///
+/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+#[allow(clippy::too_many_arguments)]
+pub async fn transfer(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    amount: &str,
+    target_account: &str,
+    transfer_id: &str,
+    deploy_params: DeployStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+) -> Result<SuccessResponse<PutDeployResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let deploy = new_transfer(
+        amount,
+        None,
+        target_account,
+        transfer_id,
+        deploy_params,
+        payment_params,
+        false,
+    )?;
+    #[allow(deprecated)]
+    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Creates a [`Deploy`] to transfer funds between purses, and sends it to the specified node for
+/// speculative execution.
+///
+/// * `amount` is a string to be parsed as a `U512` specifying the amount to be transferred.
+/// * `target_account` is the [`AccountHash`], [`URef`] or [`PublicKey`] of the account to which the
+///   funds will be transferred, formatted as a hex-encoded string.  The account's main purse will
+///   receive the funds.
+/// * `transfer_id` is a string to be parsed as a `u64` representing a user-defined identifier which
+///   will be permanently associated with the transfer.
+///
+/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+#[allow(clippy::too_many_arguments)]
+pub async fn speculative_transfer(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    amount: &str,
+    target_account: &str,
+    transfer_id: &str,
+    deploy_params: DeployStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let deploy = new_transfer(
+        amount,
+        None,
+        target_account,
+        transfer_id,
+        deploy_params,
+        payment_params,
+        false,
+    )?;
+    #[allow(deprecated)]
+    crate::speculative_exec(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Returns a transfer [`Deploy`] and outputs it to a file or stdout if the `std-fs-io` feature is
+/// enabled.
+///
+/// As a file, the `Deploy` can subsequently be signed by other parties using [`sign_deploy_file`]
+/// and then sent to the network for execution using [`send_deploy_file`].
+///
+/// If the `std-fs-io` feature is NOT enabled, `maybe_output_path` and `force` are ignored.
+/// Otherwise, `maybe_output_path` specifies the output file path, or if empty, will print it to
+/// `stdout`.  If `force` is true, and a file exists at `maybe_output_path`, it will be
+/// overwritten.  If `force` is false and a file exists at `maybe_output_path`,
+/// [`crate::Error::FileAlreadyExists`] is returned and the file will not be written.
+pub fn make_transfer(
+    #[allow(unused_variables)] maybe_output_path: &str,
+    amount: &str,
+    target_account: &str,
+    transfer_id: &str,
+    deploy_params: DeployStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+    #[allow(unused_variables)] force: bool,
+) -> Result<Deploy, CliError> {
+    let deploy = new_transfer(
+        amount,
+        None,
+        target_account,
+        transfer_id,
+        deploy_params,
+        payment_params,
+        true,
+    )?;
+    #[cfg(feature = "std-fs-io")]
+    {
+        let output = parse::output_kind(maybe_output_path, force);
+        #[allow(deprecated)]
+        crate::output_deploy(output, &deploy).map_err(CliError::from)?;
+    }
+    Ok(deploy)
+}
 
 /// Creates new Deploy with specified payment and session data.
 pub fn with_payment_and_session(
@@ -15,6 +268,10 @@ pub fn with_payment_and_session(
     session_params: SessionStrParams,
     allow_unsigned_deploy: bool,
 ) -> Result<Deploy, CliError> {
+    let gas_price: u64 = deploy_params
+        .gas_price_tolerance
+        .parse::<u64>()
+        .unwrap_or(DEFAULT_GAS_PRICE);
     let chain_name = deploy_params.chain_name.to_string();
     let session = parse::session_executable_deploy_item(session_params)?;
     let payment = parse::payment_executable_deploy_item(payment_params)?;
@@ -25,8 +282,8 @@ pub fn with_payment_and_session(
     let mut deploy_builder = DeployBuilder::new(chain_name, session)
         .with_payment(payment)
         .with_timestamp(timestamp)
+        .with_gas_price(gas_price)
         .with_ttl(ttl);
-
     let maybe_secret_key = get_maybe_secret_key(
         deploy_params.secret_key,
         allow_unsigned_deploy,
@@ -85,11 +342,16 @@ pub fn new_transfer(
     let timestamp = parse::timestamp(deploy_params.timestamp)?;
     let ttl = parse::ttl(deploy_params.ttl)?;
     let maybe_session_account = parse::session_account(deploy_params.session_account)?;
+    let gas_price: u64 = deploy_params
+        .gas_price_tolerance
+        .parse::<u64>()
+        .unwrap_or(DEFAULT_GAS_PRICE);
 
     let mut deploy_builder =
         DeployBuilder::new_transfer(chain_name, amount, source_purse, target, maybe_transfer_id)
             .with_payment(payment)
             .with_timestamp(timestamp)
+            .with_gas_price(gas_price)
             .with_ttl(ttl);
 
     let maybe_secret_key = get_maybe_secret_key(
@@ -108,50 +370,4 @@ pub fn new_transfer(
         .is_valid_size(MAX_SERIALIZED_SIZE_OF_DEPLOY)
         .map_err(crate::Error::from)?;
     Ok(deploy)
-}
-
-/// Retrieves a `SecretKey` based on the provided secret key string and configuration options.
-///
-/// # Arguments
-///
-/// * `secret_key` - A string representing the secret key. If empty, a `None` option is returned.
-/// * `allow_unsigned_deploy` - A boolean indicating whether unsigned deploys are allowed.
-///
-/// # Returns
-///
-/// Returns a `Result` containing an `Option<SecretKey>`. If a valid secret key is provided and the `sdk` feature is enabled,
-/// the `Result` contains `Some(SecretKey)`. If the `sdk` feature is disabled, the `Result` contains `Some(SecretKey)` parsed from the provided file.
-/// If `secret_key` is empty and `allow_unsigned_deploy` is `true`, the `Result` contains `None`. If `secret_key` is empty and `allow_unsigned_deploy` is `false`,
-/// an `Err` variant with a `CliError::InvalidArgument` is returned.
-///
-/// # Errors
-///
-/// Returns an `Err` variant with a `CliError::Core` or `CliError::InvalidArgument` if there are issues with parsing the secret key.
-fn get_maybe_secret_key(
-    secret_key: &str,
-    allow_unsigned_deploy: bool,
-    context: &'static str,
-) -> Result<Option<SecretKey>, CliError> {
-    if !secret_key.is_empty() {
-        #[cfg(feature = "std-fs-io")]
-        {
-            Ok(Some(parse::secret_key_from_file(secret_key)?))
-        }
-        #[cfg(not(feature = "std-fs-io"))]
-        {
-            let secret_key = SecretKey::from_pem(secret_key)
-                .map_err(|error| CliError::Core(crate::Error::CryptoError { context, error }))?;
-            Ok(Some(secret_key))
-        }
-    } else if !allow_unsigned_deploy {
-        Err(CliError::InvalidArgument {
-            context,
-            error: format!(
-                "allow_unsigned_deploy was {}, but no secret key was provided",
-                allow_unsigned_deploy
-            ),
-        })
-    } else {
-        Ok(None)
-    }
 }

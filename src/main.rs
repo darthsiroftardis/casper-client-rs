@@ -9,25 +9,34 @@ mod get_auction_info;
 mod get_balance;
 mod get_chainspec;
 mod get_dictionary_item;
+mod get_entity;
 mod get_era_info;
 mod get_era_summary;
 mod get_node_status;
 mod get_peers;
+mod get_reward;
 mod get_state_root_hash;
 mod get_validator_changes;
 mod keygen;
 mod list_rpcs;
 mod query_balance;
+mod query_balance_details;
 mod query_global_state;
+mod transaction;
+mod verify_contract;
 
 use std::process;
 
 use clap::{crate_version, Command};
 use get_balance::GetBalance;
+use get_entity::GetEntity;
+use get_reward::GetReward;
 use once_cell::sync::Lazy;
 
 use casper_client::{cli, rpcs::results::GetChainspecResult, SuccessResponse};
+use query_balance_details::QueryBalanceDetails;
 
+use crate::transaction::GetTransaction;
 use account_address::AccountAddress;
 use block::{GetBlock, GetBlockTransfers};
 use command::{ClientCommand, Success};
@@ -49,6 +58,10 @@ use keygen::Keygen;
 use list_rpcs::ListRpcs;
 use query_balance::QueryBalance;
 use query_global_state::QueryGlobalState;
+use transaction::{
+    ListTransactions, MakeTransaction, PutTransaction, SendTransaction, SignTransaction,
+};
+use verify_contract::VerifyContract;
 
 const APP_NAME: &str = "Casper client";
 
@@ -70,22 +83,31 @@ static VERSION: Lazy<String> =
 enum DisplayOrder {
     PutDeploy,
     MakeDeploy,
+    PutTransaction,
+    MakeTransaction,
     SignDeploy,
+    SignTransaction,
     SendDeploy,
+    SendTransaction,
     Transfer,
     MakeTransfer,
     GetDeploy,
+    GetTransaction,
     GetBalance,
     GetBlock,
     GetBlockTransfers,
     ListDeploys,
+    ListTransactions,
     GetStateRootHash,
     GetEraSummary,
     GetEraInfo,
     QueryGlobalState,
     QueryBalance,
+    QueryBalanceDetails,
     GetDictionaryItem,
     GetAccount,
+    GetEntity,
+    GetReward,
     GetAuctionInfo,
     GetValidatorChanges,
     GetPeers,
@@ -95,6 +117,7 @@ enum DisplayOrder {
     Keygen,
     AccountAddress,
     GenerateCompletion,
+    VerifyContract,
 }
 
 fn cli() -> Command {
@@ -103,17 +126,31 @@ fn cli() -> Command {
         .about("A client for interacting with the Casper network")
         .subcommand(PutDeploy::build(DisplayOrder::PutDeploy as usize))
         .subcommand(MakeDeploy::build(DisplayOrder::MakeDeploy as usize))
+        .subcommand(PutTransaction::build(DisplayOrder::PutTransaction as usize))
+        .subcommand(MakeTransaction::build(
+            DisplayOrder::MakeTransaction as usize,
+        ))
         .subcommand(SignDeploy::build(DisplayOrder::SignDeploy as usize))
+        .subcommand(SignTransaction::build(
+            DisplayOrder::SignTransaction as usize,
+        ))
         .subcommand(SendDeploy::build(DisplayOrder::SendDeploy as usize))
+        .subcommand(SendTransaction::build(
+            DisplayOrder::SendTransaction as usize,
+        ))
         .subcommand(Transfer::build(DisplayOrder::Transfer as usize))
         .subcommand(MakeTransfer::build(DisplayOrder::MakeTransfer as usize))
         .subcommand(GetBalance::build(DisplayOrder::GetBalance as usize).hide(true))
         .subcommand(GetDeploy::build(DisplayOrder::GetDeploy as usize))
+        .subcommand(GetTransaction::build(DisplayOrder::GetTransaction as usize))
         .subcommand(GetBlock::build(DisplayOrder::GetBlock as usize))
         .subcommand(GetBlockTransfers::build(
             DisplayOrder::GetBlockTransfers as usize,
         ))
         .subcommand(ListDeploys::build(DisplayOrder::ListDeploys as usize))
+        .subcommand(ListTransactions::build(
+            DisplayOrder::ListTransactions as usize,
+        ))
         .subcommand(GetStateRootHash::build(
             DisplayOrder::GetStateRootHash as usize,
         ))
@@ -123,10 +160,15 @@ fn cli() -> Command {
             DisplayOrder::QueryGlobalState as usize,
         ))
         .subcommand(QueryBalance::build(DisplayOrder::QueryBalance as usize))
+        .subcommand(QueryBalanceDetails::build(
+            DisplayOrder::QueryBalanceDetails as usize,
+        ))
         .subcommand(GetDictionaryItem::build(
             DisplayOrder::GetDictionaryItem as usize,
         ))
         .subcommand(GetAccount::build(DisplayOrder::GetAccount as usize))
+        .subcommand(GetEntity::build(DisplayOrder::GetEntity as usize))
+        .subcommand(GetReward::build(DisplayOrder::GetReward as usize))
         .subcommand(GetAuctionInfo::build(DisplayOrder::GetAuctionInfo as usize))
         .subcommand(GetValidatorChanges::build(
             DisplayOrder::GetValidatorChanges as usize,
@@ -140,6 +182,7 @@ fn cli() -> Command {
         .subcommand(GenerateCompletion::build(
             DisplayOrder::GenerateCompletion as usize,
         ))
+        .subcommand(VerifyContract::build(DisplayOrder::VerifyContract as usize))
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -154,22 +197,31 @@ async fn main() {
     let result = match subcommand_name {
         PutDeploy::NAME => PutDeploy::run(matches).await,
         MakeDeploy::NAME => MakeDeploy::run(matches).await,
+        PutTransaction::NAME => PutTransaction::run(matches).await,
+        MakeTransaction::NAME => MakeTransaction::run(matches).await,
         SignDeploy::NAME => SignDeploy::run(matches).await,
+        SignTransaction::NAME => SignTransaction::run(matches).await,
         SendDeploy::NAME => SendDeploy::run(matches).await,
+        SendTransaction::NAME => SendTransaction::run(matches).await,
         Transfer::NAME => Transfer::run(matches).await,
         MakeTransfer::NAME => MakeTransfer::run(matches).await,
         GetDeploy::NAME => GetDeploy::run(matches).await,
+        GetTransaction::NAME => GetTransaction::run(matches).await,
         GetBalance::NAME => GetBalance::run(matches).await,
         GetBlock::NAME => GetBlock::run(matches).await,
         GetBlockTransfers::NAME => GetBlockTransfers::run(matches).await,
         ListDeploys::NAME => ListDeploys::run(matches).await,
+        ListTransactions::NAME => ListTransactions::run(matches).await,
         GetStateRootHash::NAME => GetStateRootHash::run(matches).await,
         GetEraSummary::NAME => GetEraSummary::run(matches).await,
         GetEraInfo::NAME => GetEraInfo::run(matches).await,
         QueryGlobalState::NAME => QueryGlobalState::run(matches).await,
         QueryBalance::NAME => QueryBalance::run(matches).await,
+        QueryBalanceDetails::NAME => QueryBalanceDetails::run(matches).await,
         GetDictionaryItem::NAME => GetDictionaryItem::run(matches).await,
         GetAccount::NAME => GetAccount::run(matches).await,
+        GetEntity::NAME => GetEntity::run(matches).await,
+        GetReward::NAME => GetReward::run(matches).await,
         GetAuctionInfo::NAME => GetAuctionInfo::run(matches).await,
         GetValidatorChanges::NAME => GetValidatorChanges::run(matches).await,
         GetPeers::NAME => GetPeers::run(matches).await,
@@ -179,6 +231,7 @@ async fn main() {
         Keygen::NAME => Keygen::run(matches).await,
         AccountAddress::NAME => AccountAddress::run(matches).await,
         GenerateCompletion::NAME => GenerateCompletion::run(matches).await,
+        VerifyContract::NAME => VerifyContract::run(matches).await,
         _ => {
             let _ = cli().print_long_help();
             println!();
@@ -188,7 +241,7 @@ async fn main() {
 
     let mut verbosity_level = common::verbose::get(matches);
     if verbosity_level == 0 {
-        verbosity_level += 1
+        verbosity_level += 1;
     }
 
     match result {

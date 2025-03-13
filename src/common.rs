@@ -287,13 +287,14 @@ pub(super) mod purse_identifier {
     const ARG_SHORT: char = 'p';
     const ARG_VALUE_NAME: &str = "FORMATTED STRING or PATH";
     const ARG_HELP: &str =
-        "The identifier for the purse. This can be a public key or account hash, implying the main \
-        purse of the given account should be used. Alternatively it can be a purse URef. To \
-        provide a public key, it must be a properly formatted public key. The public key may \
-        be read in from a file, in which case enter the path to the file as the --purse-identifier \
-        argument. The file should be one of the two public key files generated via the `keygen` \
-        subcommand; \"public_key_hex\" or \"public_key.pem\". To provide an account hash, it must \
-        be formatted as \"account-hash-<HEX STRING>\", or for a URef as \
+        "The identifier for the purse. This can be a public key, account hash or an entity \
+        address, implying the main purse of the given account should be used. Alternatively it \
+        can be a purse URef. To provide a public key, it must be a properly formatted public key. \
+        The public key may be read in from a file, in which case enter the path to the file as \
+        the --purse-identifier argument. The file should be one of the two public key files \
+        generated via the `keygen` subcommand; \"public_key_hex\" or \"public_key.pem\". To \
+        provide an account hash, it must be formatted as \"account-hash-<HEX STRING>\", or \
+        for an entity address as \"entity-account-<HEX STRING>\" or for a URef as \
         \"uref-<HEX STRING>-<THREE DIGIT INTEGER>\"";
 
     pub fn arg(order: usize, is_required: bool) -> Arg {
@@ -349,6 +350,41 @@ pub(super) mod account_identifier {
     }
 }
 
+pub(super) mod entity_identifier {
+    use super::*;
+
+    pub(super) const ARG_NAME: &str = "entity-identifier";
+    const ARG_SHORT: char = 'e';
+    const ARG_VALUE_NAME: &str = "FORMATTED STRING or PATH";
+    const ARG_HELP: &str =
+        "The identifier for an addressable entity or an account. This can be an entity hash, a public \
+        key or an account hash. To provide an entity hash, it must be formatted as \
+        \"entity-contract-<HEX STRING>\" or \"entity-account-<HEX STRING>\". \
+        To provide a public key, it must be a properly formatted public key. The public key may be \
+        read in from a file, in which case enter the path to the file as the --account-identifier \
+        argument. The file should be one of the two public key files generated via the `keygen` \
+        subcommand; \"public_key_hex\" or \"public_key.pem\". To provide an account hash, it must \
+        be formatted as \"account-hash-<HEX STRING>\"";
+
+    pub fn arg(order: usize, is_required: bool) -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .short(ARG_SHORT)
+            .required(is_required)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(order)
+    }
+
+    pub fn get(matches: &ArgMatches) -> Result<String, CliError> {
+        let value = matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default();
+        public_key::try_read_from_file(value)
+    }
+}
+
 /// Handles providing the arg for and retrieval of the purse URef.
 pub(super) mod purse_uref {
     use super::*;
@@ -372,5 +408,86 @@ pub(super) mod purse_uref {
 
     pub fn get(matches: &ArgMatches) -> Option<&str> {
         matches.get_one::<String>(ARG_NAME).map(String::as_str)
+    }
+}
+
+/// Handles providing the arg for and retrieval of the era ID.
+pub mod era_identifier {
+    use super::*;
+
+    pub(crate) const ARG_NAME: &str = "era-identifier";
+    const ARG_SHORT: char = 'e';
+    const ARG_VALUE_NAME: &str = "INTEGER";
+    const ARG_HELP: &str = "Integer identifying the era";
+    const ARG_HELP_WITH_EXTRA_INFO: &str =
+        "Integer identifying the era. If not given, the last completed era will be used";
+
+    pub(crate) fn arg(order: usize, extra_help_string: bool) -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .short(ARG_SHORT)
+            .required(false)
+            .value_name(ARG_VALUE_NAME)
+            .help(if extra_help_string {
+                ARG_HELP_WITH_EXTRA_INFO
+            } else {
+                ARG_HELP
+            })
+            .display_order(order)
+    }
+
+    pub(crate) fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+}
+
+/// Handles providing the arg for and retrieval of the deploy hash.
+pub mod deploy_hash {
+    use super::*;
+
+    const ARG_NAME: &str = "deploy-hash";
+    const ARG_VALUE_NAME: &str = "HEX STRING";
+    const ARG_HELP: &str = "Hex-encoded deploy hash";
+
+    pub fn arg(display_order: usize) -> Arg {
+        Arg::new(ARG_NAME)
+            .required(true)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(display_order)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_else(|| panic!("should have {} arg", ARG_NAME))
+    }
+}
+
+/// Handles providing the arg for and retrieval of the transaction hash.
+pub mod transaction_hash {
+    use super::*;
+
+    const ARG_NAME: &str = "transaction-hash";
+    const ARG_VALUE_NAME: &str = "HEX STRING";
+    const ARG_HELP: &str = "Hex-encoded transaction hash";
+
+    pub fn arg(display_order: usize) -> Arg {
+        Arg::new(ARG_NAME)
+            .required(true)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(display_order)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_else(|| panic!("should have {} arg", ARG_NAME))
     }
 }

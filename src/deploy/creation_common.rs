@@ -23,6 +23,7 @@ pub(super) enum DisplayOrder {
     Input,
     Output,
     Force,
+    GasPrice,
     TransferAmount,
     TransferTargetAccount,
     TransferId,
@@ -32,7 +33,6 @@ pub(super) enum DisplayOrder {
     SessionCode,
     SessionArgSimple,
     SessionArgsJson,
-    SessionArgsComplex,
     SessionHash,
     SessionName,
     SessionPackageHash,
@@ -45,7 +45,6 @@ pub(super) enum DisplayOrder {
     PaymentCode,
     PaymentArgSimple,
     PaymentArgsJson,
-    PaymentArgsComplex,
     PaymentHash,
     PaymentName,
     PaymentPackageHash,
@@ -121,21 +120,11 @@ pub(super) mod show_json_args_examples {
 pub(super) fn session_str_params(matches: &ArgMatches) -> SessionStrParams<'_> {
     let session_args_simple = arg_simple::session::get(matches);
     let session_args_json = args_json::session::get(matches);
-    let session_args_complex = args_complex::session::get(matches);
     if is_session_transfer::get(matches) {
-        return SessionStrParams::with_transfer(
-            session_args_simple,
-            session_args_json,
-            session_args_complex,
-        );
+        return SessionStrParams::with_transfer(session_args_simple, session_args_json);
     }
     if let Some(session_path) = session_path::get(matches) {
-        return SessionStrParams::with_path(
-            session_path,
-            session_args_simple,
-            session_args_json,
-            session_args_complex,
-        );
+        return SessionStrParams::with_path(session_path, session_args_simple, session_args_json);
     }
     let session_entry_point = session_entry_point::get(matches);
     if let Some(session_hash) = session_hash::get(matches) {
@@ -144,7 +133,6 @@ pub(super) fn session_str_params(matches: &ArgMatches) -> SessionStrParams<'_> {
             session_entry_point,
             session_args_simple,
             session_args_json,
-            session_args_complex,
         );
     }
     if let Some(session_name) = session_name::get(matches) {
@@ -153,7 +141,6 @@ pub(super) fn session_str_params(matches: &ArgMatches) -> SessionStrParams<'_> {
             session_entry_point,
             session_args_simple,
             session_args_json,
-            session_args_complex,
         );
     }
     let session_version = session_version::get(matches);
@@ -164,7 +151,6 @@ pub(super) fn session_str_params(matches: &ArgMatches) -> SessionStrParams<'_> {
             session_entry_point,
             session_args_simple,
             session_args_json,
-            session_args_complex,
         );
     }
     if let Some(session_package_name) = session_package_name::get(matches) {
@@ -174,7 +160,6 @@ pub(super) fn session_str_params(matches: &ArgMatches) -> SessionStrParams<'_> {
             session_entry_point,
             session_args_simple,
             session_args_json,
-            session_args_complex,
         );
     }
     unreachable!("clap arg groups and parsing should prevent this")
@@ -186,14 +171,8 @@ pub(super) fn payment_str_params(matches: &ArgMatches) -> PaymentStrParams<'_> {
     }
     let payment_args_simple = arg_simple::payment::get(matches);
     let payment_args_json = args_json::payment::get(matches);
-    let payment_args_complex = args_complex::payment::get(matches);
     if let Some(payment_path) = payment_path::get(matches) {
-        return PaymentStrParams::with_path(
-            payment_path,
-            payment_args_simple,
-            payment_args_json,
-            payment_args_complex,
-        );
+        return PaymentStrParams::with_path(payment_path, payment_args_simple, payment_args_json);
     }
     let payment_entry_point = payment_entry_point::get(matches);
     if let Some(payment_hash) = payment_hash::get(matches) {
@@ -202,7 +181,6 @@ pub(super) fn payment_str_params(matches: &ArgMatches) -> PaymentStrParams<'_> {
             payment_entry_point,
             payment_args_simple,
             payment_args_json,
-            payment_args_complex,
         );
     }
     if let Some(payment_name) = payment_name::get(matches) {
@@ -211,7 +189,6 @@ pub(super) fn payment_str_params(matches: &ArgMatches) -> PaymentStrParams<'_> {
             payment_entry_point,
             payment_args_simple,
             payment_args_json,
-            payment_args_complex,
         );
     }
     let payment_version = payment_version::get(matches);
@@ -222,7 +199,6 @@ pub(super) fn payment_str_params(matches: &ArgMatches) -> PaymentStrParams<'_> {
             payment_entry_point,
             payment_args_simple,
             payment_args_json,
-            payment_args_complex,
         );
     }
     if let Some(payment_package_name) = payment_package_name::get(matches) {
@@ -232,7 +208,6 @@ pub(super) fn payment_str_params(matches: &ArgMatches) -> PaymentStrParams<'_> {
             payment_entry_point,
             payment_args_simple,
             payment_args_json,
-            payment_args_complex,
         );
     }
     unreachable!("clap arg groups and parsing should prevent this")
@@ -243,33 +218,26 @@ pub(super) mod speculative_exec {
     use super::*;
 
     const ARG_NAME: &str = "speculative-exec";
-    const ARG_VALUE_NAME: &str = "HEX STRING OR INTEGER";
     const ARG_HELP: &str =
         "If the receiving node supports this, execution of the deploy will only be attempted on \
         that single node. Full validation of the deploy is not performed, and successful execution \
         at the given global state is no guarantee that the deploy will be able to be successfully \
-        executed if put to the network, nor should execution costs be expected to be identical. \
-        Optionally provide the hex-encoded block hash or height of the block to specify the global \
-        state on which to execute";
-    const DEFAULT_MISSING_VALUE: &str = "";
+        executed if put to the network, nor should execution costs be expected to be identical.";
 
     pub(in crate::deploy) fn arg() -> Arg {
         Arg::new(ARG_NAME)
             .long(ARG_NAME)
             .required(false)
-            .value_name(ARG_VALUE_NAME)
-            .num_args(0..=1)
-            .default_missing_value(DEFAULT_MISSING_VALUE)
+            .num_args(0)
             .help(ARG_HELP)
             .display_order(DisplayOrder::SpeculativeExec as usize)
     }
 
-    // get: The command line posibilities are encoded by a combination of option and &str
-    // None represents no --speculative-exec argument at all
-    // Some("") represents a --speculative-exec with no/empty argument
-    // Some(block_identifier) represents "--speculative-exec block_identifier"
-    pub(in crate::deploy) fn get(matches: &ArgMatches) -> Option<&str> {
-        matches.get_one::<String>(ARG_NAME).map(String::as_str)
+    // get: The command line posibilities are encoded by a boolean
+    // false represents no --speculative-exec argument at all
+    // true represents a --speculative-exec with no argument
+    pub(in crate::deploy) fn get(matches: &ArgMatches) -> bool {
+        matches.get_flag(ARG_NAME)
     }
 }
 
@@ -450,6 +418,34 @@ pub(super) mod arg_simple {
     }
 }
 
+pub(super) mod gas_price {
+    use super::*;
+    pub(crate) const ARG_NAME: &str = "gas-price";
+
+    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
+
+    const ARG_SHORT: char = 'g';
+    const ARG_HELP: &str =
+        "The maximum gas price that the user is willing to pay for the transaction";
+
+    pub(crate) fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .short(ARG_SHORT)
+            .required(false)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::GasPrice as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> &str {
+        matches
+            .get_one::<String>(ARG_NAME)
+            .map(String::as_str)
+            .unwrap_or_default()
+    }
+}
+
 /// Handles providing the arg for and retrieval of JSON session and payment args.
 pub(super) mod args_json {
     use super::*;
@@ -506,62 +502,6 @@ pub(super) mod args_json {
             .action(ArgAction::Append)
             .value_name(ARG_VALUE_NAME)
             .help(ARG_HELP.as_str())
-            .display_order(order)
-    }
-}
-
-/// Handles providing the arg for and retrieval of complex session and payment args. These are read
-/// in from a file.
-pub(super) mod args_complex {
-    use super::*;
-
-    const ARG_VALUE_NAME: &str = common::ARG_PATH;
-    const ARG_HELP: &str =
-        "Path to file containing 'ToBytes'-encoded named and typed args for passing to the Wasm \
-        code";
-
-    pub(in crate::deploy) mod session {
-        use super::*;
-
-        pub const ARG_NAME: &str = "session-args-complex";
-
-        pub fn arg() -> Arg {
-            super::arg(ARG_NAME, DisplayOrder::SessionArgsComplex as usize)
-                .requires(super::session::ARG_NAME)
-        }
-
-        pub fn get(matches: &ArgMatches) -> &str {
-            matches
-                .get_one::<String>(ARG_NAME)
-                .map(String::as_str)
-                .unwrap_or_default()
-        }
-    }
-
-    pub(in crate::deploy) mod payment {
-        use super::*;
-
-        pub const ARG_NAME: &str = "payment-args-complex";
-
-        pub fn arg() -> Arg {
-            super::arg(ARG_NAME, DisplayOrder::PaymentArgsComplex as usize)
-                .requires(super::payment::ARG_NAME)
-        }
-
-        pub fn get(matches: &ArgMatches) -> &str {
-            matches
-                .get_one::<String>(ARG_NAME)
-                .map(String::as_str)
-                .unwrap_or_default()
-        }
-    }
-
-    fn arg(name: &'static str, order: usize) -> Arg {
-        Arg::new(name)
-            .long(name)
-            .required(false)
-            .value_name(ARG_VALUE_NAME)
-            .help(ARG_HELP)
             .display_order(order)
     }
 }
@@ -632,11 +572,9 @@ pub(super) fn apply_common_creation_options(
         );
 
     if include_node_address {
-        subcommand = subcommand.arg(
-            common::node_address::arg(DisplayOrder::NodeAddress as usize)
-                .required_unless_present(show_simple_arg_examples::ARG_NAME)
-                .required_unless_present(show_json_args_examples::ARG_NAME),
-        );
+        subcommand = subcommand.arg(common::node_address::arg(
+            DisplayOrder::NodeAddress as usize,
+        ));
     }
 
     let secret_key_arg = if require_secret_key {
@@ -664,13 +602,11 @@ pub(super) fn apply_common_session_options(subcommand: Command) -> Command {
     subcommand
         .arg(arg_simple::session::arg())
         .arg(args_json::session::arg())
-        .arg(args_complex::session::arg())
         // Group the session-arg args so only one style is used to ensure consistent ordering.
         .group(
             ArgGroup::new(SESSION_ARG_GROUP)
                 .arg(arg_simple::session::ARG_NAME)
                 .arg(args_json::session::ARG_NAME)
-                .arg(args_complex::session::ARG_NAME)
                 .required(false),
         )
         .arg(is_session_transfer::arg())
@@ -717,13 +653,11 @@ pub(crate) fn apply_common_payment_options(
     subcommand
         .arg(arg_simple::payment::arg())
         .arg(args_json::payment::arg())
-        .arg(args_complex::payment::arg())
         .group(
             // Ensure these three forms of inputting payment-args are mutually exclusive.
             ArgGroup::new("payment-args")
                 .arg(arg_simple::payment::ARG_NAME)
                 .arg(args_json::payment::ARG_NAME)
-                .arg(args_complex::payment::ARG_NAME)
                 .required(false),
         )
         .arg(standard_payment_amount::arg(default_amount))

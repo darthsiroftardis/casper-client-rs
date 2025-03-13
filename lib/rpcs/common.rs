@@ -1,12 +1,12 @@
 //! Common types associated with sending and receiving JSON-RPCs.
 
-#[cfg(doc)]
-use crate::types::Block;
-use crate::types::BlockHash;
-
 use serde::{Deserialize, Serialize};
 
-use casper_hashing::Digest;
+#[cfg(doc)]
+use casper_types::Block;
+use casper_types::{
+    contract_messages::Messages, execution::Effects, BlockHash, Digest, Gas, Transfer,
+};
 
 /// Enum of possible ways to identify a [`Block`].
 #[derive(Copy, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Serialize, Deserialize, Debug)]
@@ -30,4 +30,23 @@ pub enum GlobalStateIdentifier {
     BlockHeight(u64),
     /// Query using the state root hash.
     StateRootHash(Digest),
+}
+
+/// The result of a speculative execution.
+#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize)]
+pub struct SpeculativeExecutionResult {
+    /// Block hash against which the execution was performed.
+    pub block_hash: BlockHash,
+    /// List of transfers that happened during execution.
+    pub transfers: Vec<Transfer>,
+    /// Gas limit.
+    pub limit: Gas,
+    /// Gas consumed.
+    pub consumed: Gas,
+    /// Execution effects.
+    pub effects: Effects,
+    /// Messages emitted during execution.
+    pub messages: Messages,
+    /// Did the wasm execute successfully?
+    pub error: Option<String>,
 }

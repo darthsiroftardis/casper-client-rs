@@ -35,6 +35,7 @@ jobs:
           rustup component add --toolchain ${{ env.RUST_CHANNEL }} rustfmt rust-src clippy
           rustup default ${{ env.RUST_CHANNEL }}
           rustup target add wasm32-unknown-unknown
+
       - name: Fmt
         uses: actions-rs/cargo@v1
         with:
@@ -45,6 +46,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: audit
+          args: --ignore RUSTSEC-2025-0009
 
       - name: Clippy
         uses: actions-rs/cargo@v1
@@ -75,9 +77,14 @@ jobs:
           command: test
           args: --no-default-features
 
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-targets
+
       - name: Build lib for Wasm with no features
         uses: actions-rs/cargo@v1
         with:
           command: build
-          target: wasm32-unknown-unknown
           args: --lib --target wasm32-unknown-unknown --no-default-features

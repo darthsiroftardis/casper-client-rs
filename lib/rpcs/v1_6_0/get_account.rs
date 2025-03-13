@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use casper_types::account::AccountHash;
-use casper_types::{ProtocolVersion, PublicKey};
+use casper_types::{
+    account::{Account, AccountHash},
+    ProtocolVersion, PublicKey,
+};
 
+use crate::rpcs::common::BlockIdentifier;
 pub(crate) use crate::rpcs::v1_4_5::get_account::GET_ACCOUNT_METHOD;
-use crate::{rpcs::common::BlockIdentifier, types::Account};
 
 /// Identifier of an account.
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]

@@ -8,10 +8,14 @@ pub(crate) mod v1_4_5;
 pub(crate) mod v1_5_0;
 /// RPCs provided by the v1.6.0 node.
 pub(crate) mod v1_6_0;
+/// RPCs provided by the v2.0.0 node.
+pub(crate) mod v2_0_0;
 
-pub use v1_5_0::{
-    get_dictionary_item::DictionaryItemIdentifier, query_balance::PurseIdentifier,
+pub use v2_0_0::{
+    get_account::AccountIdentifier,
+    get_dictionary_item::DictionaryItemIdentifier,
+    get_entity::{AddressableEntity, EntityIdentifier, EntityOrAccount},
+    get_reward::EraIdentifier,
+    query_balance::PurseIdentifier,
     query_global_state::GlobalStateIdentifier,
 };
-
-pub use v1_6_0::get_account::AccountIdentifier;

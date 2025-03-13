@@ -1,18 +1,22 @@
-//! The JSON-RPC request and response types at v1.5.0 of casper-node.
+//! The JSON-RPC request and response types at v1.6.0 of casper-node.
 
 pub(crate) mod get_account;
-
-pub(crate) mod query_global_state;
 
 // The following RPCs are all unchanged from v1.5.0, so we just re-export them.
 
 pub(crate) mod get_chainspec {
+    pub use crate::rpcs::v1_5_0::get_chainspec::GetChainspecResult;
     pub(crate) use crate::rpcs::v1_5_0::get_chainspec::GET_CHAINSPEC_METHOD;
-    pub use crate::rpcs::v1_5_0::get_chainspec::{ChainspecRawBytes, GetChainspecResult};
 }
 
 pub(crate) mod get_deploy {
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
+    #[allow(unused_imports)]
     pub use crate::rpcs::v1_5_0::get_deploy::GetDeployResult;
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
+    #[allow(unused_imports)]
     pub(crate) use crate::rpcs::v1_5_0::get_deploy::{GetDeployParams, GET_DEPLOY_METHOD};
 }
 
@@ -25,24 +29,15 @@ pub(crate) mod get_era_summary {
 
 pub(crate) mod get_node_status {
     pub(crate) use crate::rpcs::v1_5_0::get_node_status::GET_NODE_STATUS_METHOD;
+    #[allow(unused_imports)]
     pub use crate::rpcs::v1_5_0::get_node_status::{
-        ActivationPoint, AvailableBlockRange, GetNodeStatusResult, MinimalBlockInfo, NextUpgrade,
-        ReactorState,
-    };
-}
-
-pub(crate) mod query_balance {
-    pub use crate::rpcs::v1_5_0::query_balance::QueryBalanceResult;
-    pub(crate) use crate::rpcs::v1_5_0::query_balance::{
-        PurseIdentifier, QueryBalanceParams, QUERY_BALANCE_METHOD,
+        ActivationPoint, AvailableBlockRange, BlockSyncStatus, BlockSynchronizerStatus,
+        GetNodeStatusResult, MinimalBlockInfo, NextUpgrade, ReactorState,
     };
 }
 
 pub(crate) mod speculative_exec {
-    pub use crate::rpcs::v1_5_0::speculative_exec::SpeculativeExecResult;
-    pub(crate) use crate::rpcs::v1_5_0::speculative_exec::{
-        SpeculativeExecParams, SPECULATIVE_EXEC_METHOD,
-    };
+    pub(crate) use crate::rpcs::v1_5_0::speculative_exec::SPECULATIVE_EXEC_METHOD;
 }
 
 pub(crate) mod get_auction_info {
@@ -58,6 +53,9 @@ pub(crate) mod get_balance {
 }
 
 pub(crate) mod get_block {
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
+    #[allow(unused_imports)]
     pub use crate::rpcs::v1_5_0::get_block::GetBlockResult;
     pub(crate) use crate::rpcs::v1_5_0::get_block::{GetBlockParams, GET_BLOCK_METHOD};
 }
@@ -70,12 +68,8 @@ pub(crate) mod get_block_transfers {
 }
 
 pub(crate) mod get_dictionary_item {
-    pub use crate::rpcs::v1_5_0::get_dictionary_item::{
-        DictionaryItemIdentifier, GetDictionaryItemResult,
-    };
-    pub(crate) use crate::rpcs::v1_5_0::get_dictionary_item::{
-        GetDictionaryItemParams, GET_DICTIONARY_ITEM_METHOD,
-    };
+    pub use crate::rpcs::v1_5_0::get_dictionary_item::GetDictionaryItemResult;
+    pub(crate) use crate::rpcs::v1_5_0::get_dictionary_item::GET_DICTIONARY_ITEM_METHOD;
 }
 
 pub(crate) mod get_era_info {
@@ -114,4 +108,13 @@ pub(crate) mod list_rpcs {
 pub(crate) mod put_deploy {
     pub use crate::rpcs::v1_5_0::put_deploy::PutDeployResult;
     pub(crate) use crate::rpcs::v1_5_0::put_deploy::{PutDeployParams, PUT_DEPLOY_METHOD};
+}
+
+pub(crate) mod query_global_state {
+    pub use crate::rpcs::v1_5_0::query_global_state::{
+        GlobalStateIdentifier, QueryGlobalStateResult,
+    };
+    pub(crate) use crate::rpcs::v1_5_0::query_global_state::{
+        QueryGlobalStateParams, QUERY_GLOBAL_STATE_METHOD,
+    };
 }

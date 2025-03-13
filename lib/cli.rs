@@ -21,301 +21,80 @@
 //!   [`Block`] height or empty.  If empty, the latest `Block` known on the server will be used.
 
 /// Functions for creating Deploys.
+mod arg_handling;
 pub mod deploy;
+mod deploy_builder;
 mod deploy_str_params;
 mod dictionary_item_str_params;
 mod error;
+mod fields_container;
 mod json_args;
-mod parse;
+pub mod parse;
 mod payment_str_params;
 mod session_str_params;
 mod simple_args;
 #[cfg(test)]
 mod tests;
+mod transaction;
+mod transaction_builder_params;
+mod transaction_str_params;
+mod transaction_v1_builder;
 
 #[cfg(feature = "std-fs-io")]
 use serde::Serialize;
 
-use casper_hashing::Digest;
-use casper_types::URef;
 #[cfg(doc)]
 use casper_types::{account::AccountHash, Key};
+
+use casper_types::{Digest, URef};
 
 use crate::{
     rpcs::{
         results::{
-            GetAccountResult, GetAuctionInfoResult, GetBalanceResult, GetBlockResult,
-            GetBlockTransfersResult, GetChainspecResult, GetDeployResult, GetDictionaryItemResult,
-            GetEraInfoResult, GetEraSummaryResult, GetNodeStatusResult, GetPeersResult,
-            GetStateRootHashResult, GetValidatorChangesResult, ListRpcsResult, PutDeployResult,
-            QueryBalanceResult, QueryGlobalStateResult, SpeculativeExecResult,
+            GetAccountResult, GetAddressableEntityResult, GetAuctionInfoResult, GetBalanceResult,
+            GetBlockResult, GetBlockTransfersResult, GetChainspecResult, GetDeployResult,
+            GetDictionaryItemResult, GetEraInfoResult, GetEraSummaryResult, GetNodeStatusResult,
+            GetPeersResult, GetRewardResult, GetStateRootHashResult, GetTransactionResult,
+            GetValidatorChangesResult, ListRpcsResult, QueryBalanceDetailsResult,
+            QueryBalanceResult, QueryGlobalStateResult,
         },
         DictionaryItemIdentifier,
     },
-    types::Deploy,
     SuccessResponse,
 };
+
+#[cfg(feature = "std-fs-io")]
+use crate::verification_types::VerificationDetails;
 #[cfg(doc)]
 use crate::{Account, Block, Error, StoredValue, Transfer};
 #[cfg(doc)]
 use casper_types::PublicKey;
+#[cfg(feature = "std-fs-io")]
+pub use deploy::{
+    make_deploy, make_transfer, put_deploy, send_deploy_file, sign_deploy_file,
+    speculative_put_deploy, speculative_send_deploy_file, speculative_transfer, transfer,
+};
+pub use deploy_builder::{DeployBuilder, DeployBuilderError};
 pub use deploy_str_params::DeployStrParams;
 pub use dictionary_item_str_params::DictionaryItemStrParams;
-pub use error::CliError;
+pub use error::{CliError, FromDecStrErr};
+pub(crate) use fields_container::{FieldsContainer, FieldsContainerError};
 pub use json_args::{
     help as json_args_help, Error as JsonArgsError, ErrorDetails as JsonArgsErrorDetails, JsonArg,
-};
-pub use parse::{
-    account_identifier as parse_account_identifier, purse_identifier as parse_purse_identifier,
 };
 pub use payment_str_params::PaymentStrParams;
 pub use session_str_params::SessionStrParams;
 pub use simple_args::{help as simple_args_help, insert_arg};
-
-/// Creates a [`Deploy`] and sends it to the network for execution.
-///
-/// For details of the parameters, see [the module docs](crate::cli#common-parameters) or the docs
-/// of the individual parameter types.
-pub async fn put_deploy(
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    deploy_params: DeployStrParams<'_>,
-    session_params: SessionStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-) -> Result<SuccessResponse<PutDeployResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy =
-        deploy::with_payment_and_session(deploy_params, payment_params, session_params, false)?;
-    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-
-/// Creates a [`Deploy`] and sends it to the specified node for speculative execution.
-///
-/// For details of the parameters, see [the module docs](crate::cli#common-parameters) or the docs
-/// of the individual parameter types.
-pub async fn speculative_put_deploy(
-    maybe_block_id: &str,
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    deploy_params: DeployStrParams<'_>,
-    session_params: SessionStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy =
-        deploy::with_payment_and_session(deploy_params, payment_params, session_params, false)?;
-    let speculative_exec = parse::block_identifier(maybe_block_id)?;
-    crate::speculative_exec(rpc_id, node_address, speculative_exec, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-/// Returns a [`Deploy`] and outputs it to a file or stdout if the `std-fs-io` feature is enabled.
-///
-/// As a file, the `Deploy` can subsequently be signed by other parties using [`sign_deploy_file`]
-/// and then sent to the network for execution using [`send_deploy_file`].  Alternatively, the
-/// returned `Deploy` can be signed via the [`Deploy::sign`] method.
-///
-/// If the `std-fs-io` feature is NOT enabled, `maybe_output_path` and `force` are ignored.
-/// Otherwise, `maybe_output_path` specifies the output file path, or if empty, will print it to
-/// `stdout`.  If `force` is true, and a file exists at `maybe_output_path`, it will be
-/// overwritten.  If `force` is false and a file exists at `maybe_output_path`,
-/// [`Error::FileAlreadyExists`] is returned and the file will not be written.
-pub fn make_deploy(
-    #[allow(unused_variables)] maybe_output_path: &str,
-    deploy_params: DeployStrParams<'_>,
-    session_params: SessionStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-    #[allow(unused_variables)] force: bool,
-) -> Result<Deploy, CliError> {
-    let deploy =
-        deploy::with_payment_and_session(deploy_params, payment_params, session_params, true)?;
-    #[cfg(feature = "std-fs-io")]
-    {
-        let output = parse::output_kind(maybe_output_path, force);
-        crate::output_deploy(output, &deploy).map_err(CliError::from)?;
-    }
-    Ok(deploy)
-}
-
-/// Reads a previously-saved [`Deploy`] from a file, cryptographically signs it, and outputs it to a
-/// file or stdout.
-///
-/// `maybe_output_path` specifies the output file path, or if empty, will print it to `stdout`.  If
-/// `force` is true, and a file exists at `maybe_output_path`, it will be overwritten.  If `force`
-/// is false and a file exists at `maybe_output_path`, [`Error::FileAlreadyExists`] is returned
-/// and the file will not be written.
+pub use transaction::{make_transaction, put_transaction};
 #[cfg(feature = "std-fs-io")]
-pub fn sign_deploy_file(
-    input_path: &str,
-    secret_key_path: &str,
-    maybe_output_path: &str,
-    force: bool,
-) -> Result<(), CliError> {
-    let secret_key = parse::secret_key_from_file(secret_key_path)?;
-    let output = parse::output_kind(maybe_output_path, force);
-    crate::sign_deploy_file(input_path, &secret_key, output).map_err(CliError::from)
-}
+pub use transaction::{
+    send_transaction_file, sign_transaction_file, speculative_send_transaction_file,
+};
+pub use transaction_builder_params::TransactionBuilderParams;
+pub use transaction_str_params::TransactionStrParams;
+pub(crate) use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
 
-/// Reads a previously-saved [`Deploy`] from a file and sends it to the network for execution.
-///
-/// For details of the parameters, see [the module docs](crate::cli#common-parameters).
-#[cfg(feature = "std-fs-io")]
-pub async fn send_deploy_file(
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    input_path: &str,
-) -> Result<SuccessResponse<PutDeployResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy = crate::read_deploy_file(input_path)?;
-    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-
-/// Reads a previously-saved [`Deploy`] from a file and sends it to the specified node for
-/// speculative execution.
-/// For details of the parameters, see [the module docs](crate::cli#common-parameters).
-#[cfg(feature = "std-fs-io")]
-pub async fn speculative_send_deploy_file(
-    maybe_block_id: &str,
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    input_path: &str,
-) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let speculative_exec = parse::block_identifier(maybe_block_id)?;
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy = crate::read_deploy_file(input_path)?;
-    crate::speculative_exec(rpc_id, node_address, speculative_exec, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-
-/// Transfers funds between purses.
-///
-/// * `amount` is a string to be parsed as a `U512` specifying the amount to be transferred.
-/// * `target_account` is the [`AccountHash`], [`URef`] or [`PublicKey`] of the account to which the
-///   funds will be transferred, formatted as a hex-encoded string.  The account's main purse will
-///   receive the funds.
-/// * `transfer_id` is a string to be parsed as a `u64` representing a user-defined identifier which
-///   will be permanently associated with the transfer.
-///
-/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
-#[allow(clippy::too_many_arguments)]
-pub async fn transfer(
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    amount: &str,
-    target_account: &str,
-    transfer_id: &str,
-    deploy_params: DeployStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-) -> Result<SuccessResponse<PutDeployResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy = deploy::new_transfer(
-        amount,
-        None,
-        target_account,
-        transfer_id,
-        deploy_params,
-        payment_params,
-        false,
-    )?;
-    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-
-/// Creates a [`Deploy`] to transfer funds between purses, and sends it to the specified node for
-/// speculative execution.
-///
-/// * `amount` is a string to be parsed as a `U512` specifying the amount to be transferred.
-/// * `target_account` is the [`AccountHash`], [`URef`] or [`PublicKey`] of the account to which the
-///   funds will be transferred, formatted as a hex-encoded string.  The account's main purse will
-///   receive the funds.
-/// * `transfer_id` is a string to be parsed as a `u64` representing a user-defined identifier which
-///   will be permanently associated with the transfer.
-///
-/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
-#[allow(clippy::too_many_arguments)]
-pub async fn speculative_transfer(
-    maybe_block_id: &str,
-    maybe_rpc_id: &str,
-    node_address: &str,
-    verbosity_level: u64,
-    amount: &str,
-    target_account: &str,
-    transfer_id: &str,
-    deploy_params: DeployStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-) -> Result<SuccessResponse<SpeculativeExecResult>, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
-    let deploy = deploy::new_transfer(
-        amount,
-        None,
-        target_account,
-        transfer_id,
-        deploy_params,
-        payment_params,
-        false,
-    )?;
-    let speculative_exec = parse::block_identifier(maybe_block_id)?;
-    crate::speculative_exec(rpc_id, node_address, speculative_exec, verbosity, deploy)
-        .await
-        .map_err(CliError::from)
-}
-
-/// Returns a transfer [`Deploy`] and outputs it to a file or stdout if the `std-fs-io` feature is
-/// enabled.
-///
-/// As a file, the `Deploy` can subsequently be signed by other parties using [`sign_deploy_file`]
-/// and then sent to the network for execution using [`send_deploy_file`].  Alternatively, the
-/// returned `Deploy` can be signed via the [`Deploy::sign`] method.
-///
-/// If the `std-fs-io` feature is NOT enabled, `maybe_output_path` and `force` are ignored.
-/// Otherwise, `maybe_output_path` specifies the output file path, or if empty, will print it to
-/// `stdout`.  If `force` is true, and a file exists at `maybe_output_path`, it will be
-/// overwritten.  If `force` is false and a file exists at `maybe_output_path`,
-/// [`Error::FileAlreadyExists`] is returned and the file will not be written.
-pub fn make_transfer(
-    #[allow(unused_variables)] maybe_output_path: &str,
-    amount: &str,
-    target_account: &str,
-    transfer_id: &str,
-    deploy_params: DeployStrParams<'_>,
-    payment_params: PaymentStrParams<'_>,
-    #[allow(unused_variables)] force: bool,
-) -> Result<Deploy, CliError> {
-    let deploy = deploy::new_transfer(
-        amount,
-        None,
-        target_account,
-        transfer_id,
-        deploy_params,
-        payment_params,
-        true,
-    )?;
-    #[cfg(feature = "std-fs-io")]
-    {
-        let output = parse::output_kind(maybe_output_path, force);
-        crate::output_deploy(output, &deploy).map_err(CliError::from)?;
-    }
-    Ok(deploy)
-}
-
-/// Retrieves a [`Deploy`] from the network.
+/// Retrieves a [`casper_types::Deploy`] from the network.
 ///
 /// `deploy_hash` must be a hex-encoded, 32-byte hash digest.  For details of the other parameters,
 /// see [the module docs](crate::cli#common-parameters).
@@ -340,6 +119,30 @@ pub async fn get_deploy(
     .map_err(CliError::from)
 }
 
+/// Retrieves a [`casper_types::Transaction`] from the network.
+///
+/// `transaction_hash` must be a hex-encoded, 32-byte hash digest.  For details of the other parameters,
+/// see [the module docs](crate::cli#common-parameters).
+pub async fn get_transaction(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    transaction_hash: &str,
+    finalized_approvals: bool,
+) -> Result<SuccessResponse<GetTransactionResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let transaction_hash = parse::transaction_hash(transaction_hash)?;
+    crate::get_transaction(
+        rpc_id,
+        node_address,
+        verbosity,
+        transaction_hash,
+        finalized_approvals,
+    )
+    .await
+    .map_err(CliError::from)
+}
 /// Retrieves a [`Block`] from the network.
 ///
 /// For details of the parameters, see [the module docs](crate::cli#common-parameters).
@@ -429,7 +232,8 @@ pub async fn query_global_state(
     let rpc_id = parse::rpc_id(maybe_rpc_id);
     let verbosity = parse::verbosity(verbosity_level);
     let global_state_identifier =
-        parse::global_state_identifier(maybe_block_id, maybe_state_root_hash)?;
+        parse::global_state_identifier(maybe_block_id, maybe_state_root_hash)?
+            .ok_or(CliError::FailedToParseStateIdentifier)?;
     let key = parse::key_for_query(key)?;
     let path = if path.is_empty() {
         vec![]
@@ -454,7 +258,7 @@ pub async fn query_global_state(
 /// `maybe_block_id` or `maybe_state_root_hash` identify the global state root hash to be used for
 /// the query.  If both are empty, the latest block is used.
 ///
-/// `purse_id` can be a properly-formatted public key, account hash or URef.
+/// `purse_id` can be a properly-formatted public key, account hash, entity address or URef.
 ///
 /// For details of other parameters, see [the module docs](crate::cli#common-parameters).
 pub async fn query_balance(
@@ -472,6 +276,39 @@ pub async fn query_balance(
     let purse_identifier = parse::purse_identifier(purse_id)?;
 
     crate::query_balance(
+        rpc_id,
+        node_address,
+        verbosity,
+        maybe_global_state_identifier,
+        purse_identifier,
+    )
+    .await
+    .map_err(CliError::from)
+}
+
+/// Retrieves a purse's balance and hold information from global state.
+///
+/// `maybe_block_id` or `maybe_state_root_hash` identify the global state root hash to be used for
+/// the query.  If both are empty, the latest block is used.
+///
+/// `purse_id` can be a properly-formatted public key, account hash, entity address or URef.
+///
+/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+pub async fn query_balance_details(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    maybe_block_id: &str,
+    maybe_state_root_hash: &str,
+    purse_id: &str,
+) -> Result<SuccessResponse<QueryBalanceDetailsResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let maybe_global_state_identifier =
+        parse::global_state_identifier(maybe_block_id, maybe_state_root_hash)?;
+    let purse_identifier = parse::purse_identifier(purse_id)?;
+
+    crate::query_balance_details(
         rpc_id,
         node_address,
         verbosity,
@@ -554,9 +391,18 @@ pub async fn get_balance(
 
 /// Retrieves an [`Account`] at a given [`Block`].
 ///
-/// `public_key` is the public key as a formatted string associated with the `Account`.
-///
 /// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+///
+/// # Parameters
+/// - `maybe_rpc_id`: The optional RPC ID as a string slice.
+/// - `node_address`: The address of the node as a string slice.
+/// - `verbosity_level`: The verbosity level as a 64-bit unsigned integer.
+/// - `maybe_block_id`: The optional block ID as a string slice.
+/// - `account_identifier`: The account identifier as a string slice.
+///
+/// # Returns
+/// The result containing either a successful response with the account details or a `CliError`.
+
 pub async fn get_account(
     maybe_rpc_id: &str,
     node_address: &str,
@@ -575,6 +421,76 @@ pub async fn get_account(
         verbosity,
         maybe_block_id,
         account_identifier,
+    )
+    .await
+    .map_err(CliError::from)
+}
+
+/// Retrieves an [`crate::rpcs::v2_0_0::get_entity::EntityOrAccount`] at a given [`Block`].
+///
+/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+///
+/// # Parameters
+/// - `maybe_rpc_id`: The optional RPC ID as a string slice.
+/// - `node_address`: The address of the node as a string slice.
+/// - `verbosity_level`: The verbosity level as a 64-bit unsigned integer.
+/// - `maybe_block_id`: The optional block ID as a string slice.
+/// - `entity_identifier`: The entity identifier as a string slice.
+///
+/// # Returns
+/// The result containing either a successful response with the entity details or a `CliError`.
+pub async fn get_entity(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    maybe_block_id: &str,
+    entity_identifier: &str,
+) -> Result<SuccessResponse<GetAddressableEntityResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let maybe_block_id = parse::block_identifier(maybe_block_id)?;
+    let entity_identifier = parse::entity_identifier(entity_identifier)?;
+
+    crate::get_entity(
+        rpc_id,
+        node_address,
+        verbosity,
+        maybe_block_id,
+        entity_identifier,
+    )
+    .await
+    .map_err(CliError::from)
+}
+
+/// Retrieves an [`GetRewardResult`] at a given era.
+///
+/// `validator` is the public key as a formatted string associated with the validator.
+///
+/// `maybe_delegator` is the public key as a formatted string associated with the delegator.
+///
+/// For details of other parameters, see [the module docs](crate::cli#common-parameters).
+pub async fn get_reward(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    maybe_era_id: &str,
+    validator: &str,
+    maybe_delegator: &str,
+) -> Result<SuccessResponse<GetRewardResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let era_identifier = parse::era_identifier(maybe_era_id)?;
+    let validator =
+        parse::public_key(validator)?.ok_or(CliError::FailedToParseValidatorPublicKey)?;
+    let delegator = parse::public_key(maybe_delegator)?;
+
+    crate::get_reward(
+        rpc_id,
+        node_address,
+        verbosity,
+        era_identifier,
+        validator,
+        delegator,
     )
     .await
     .map_err(CliError::from)
@@ -707,4 +623,24 @@ pub async fn get_era_info(
     crate::get_era_info(rpc_id, node_address, verbosity, maybe_block_id)
         .await
         .map_err(CliError::from)
+}
+
+/// Verifies the smart contract code against the one installed
+/// by deploy or transaction with given hash.
+#[cfg(feature = "std-fs-io")]
+pub async fn verify_contract(
+    hash_str: &str,
+    verification_url_base_path: &str,
+    verification_project_path: Option<&str>,
+    verbosity_level: u64,
+) -> Result<VerificationDetails, CliError> {
+    let verbosity = parse::verbosity(verbosity_level);
+    crate::verify_contract(
+        hash_str,
+        verification_url_base_path,
+        verification_project_path,
+        verbosity,
+    )
+    .await
+    .map_err(CliError::from)
 }

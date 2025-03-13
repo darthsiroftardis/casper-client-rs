@@ -14,13 +14,49 @@ All notable changes to this project will be documented in this file.  The format
 ## Unreleased
 
 ### Added
-* Add support for crafting unsigned deploys and transfers by providing an account, but not secret key, to the `make-deploy` and `make-transfer` subcommands.
-* Added an optional flag to retrieve finalized approvals for `info_get_deploy`
-* Add support for providing an account identifier (public key, or account hash) for the `state_get_account_info` RPC method.
+* Add module to support node 2.0.0 RPCs.
+* Add `make-transaction` command for creating transactions to support node 2.0.0.
+* Add `sign-transaction` command for signing transactions to support node 2.0.0.
+* Add `put-transaction` command for sending transactions to support node 2.0.0.
+* Add support for new node RPC method `info_get_transaction`, used in the binary's new `get-transaction` subcommand.
+* Add support for new node RPC method `state_get_entity`, used in the binary's new `get-entity` subcommand.
+* Add `send-transaciton` command for sending previously made and signed transaction files to the network.
 
 ### Changed
-* Changed query-global-state to support omitting a global state identifier, if no global state identifier is provided the latest block will be used.
+* Update to match change to node RPC `info_get_deploy`.
+* Update to match change to node RPC `info_get_status` used in the binary's `get-node-status` subcommand.
 
+### Removed
+* Remove following public types which are now available in `casper_types`:
+  * `Account` and its related types `ActionThresholds` and `AssociatedKey`
+  * `Bid`
+  * `BidderAndBid`
+  * `Block` and its related types `BlockBody`, `BlockHash`, `BlockHashAndHeight` and `BlockHeader`
+  * `ChainspecRawBytes`
+  * `Contract`
+  * `ContractPackage` and its related types `ContractPackageStatus`, `ContractVersion`, `DisabledVersion` and `Group`
+  * `Delegator`
+  * `Deploy` and its related types `Approval`, `DeployBuilder`, `DeployHash` and `DeployHeader`
+  * `EraEnd` and its related types `EraReport`, `Reward` and `ValidatorWeight`
+  * `ExecutableDeployItem`
+  * `NamedKey`
+  * `Proof`
+  * `StoredValue`
+  * `TimeDiff`
+  * `Timestamp`
+  * `TransferTarget`
+
+
+
+## Release immediately following 2.0.0
+
+### Added
+* Add support for crafting unsigned deploys and transfers by providing an account, but not seccret key, to the `make-deploy` and `make-transfer` subcommands.
+* Add an optional flag to retrieve finalized approvals for `info_get_deploy`
+* Add support for providing an account identifier (public key, or account hash) for the `state_get_account_info` RPC method.
+
+### Fixed
+* Fix `GetBlockResult` to match the node's RPC response via `JsonBlockWithSignatures`, and provide block proofs.
 
 
 ## [2.0.0] - 2023-06-28

@@ -1,9 +1,10 @@
 #[cfg(doc)]
-use casper_types::{account::AccountHash, HashAddr};
+use casper_types::{
+    account::{Account, AccountHash},
+    Contract, HashAddr,
+};
 use casper_types::{Key, URef};
 
-#[cfg(doc)]
-use crate::types::{Account, Contract};
 use crate::{cli::CliError, rpcs::DictionaryItemIdentifier};
 
 /// Various ways of uniquely identifying a dictionary item.
@@ -23,6 +24,16 @@ pub enum DictionaryItemStrParams<'a> {
         /// The [`HashAddr`] as a formatted string, identifying the contract whose named keys
         /// contains `dictionary_name`.
         hash_addr: &'a str,
+        /// The named key under which the dictionary seed `URef` is stored.
+        dictionary_name: &'a str,
+        /// The key within the dictionary under which the item is held.
+        dictionary_item_key: &'a str,
+    },
+    /// A dictionary item identified via a [`casper_types::AddressableEntity`]'s named keys.
+    EntityNamedKey {
+        /// The [`casper_types::EntityAddr`] as a formatted string, identifying the entity whose named keys
+        /// contains `dictionary_name`.
+        entity_addr: &'a str,
         /// The named key under which the dictionary seed `URef` is stored.
         dictionary_name: &'a str,
         /// The key within the dictionary under which the item is held.
@@ -80,12 +91,38 @@ impl<'a> TryFrom<DictionaryItemStrParams<'a>> for DictionaryItemIdentifier {
                         error,
                     }
                 })?;
-                let hash_addr = key.into_hash().ok_or(CliError::InvalidArgument {
+                let hash_addr = key.into_hash_addr().ok_or(CliError::InvalidArgument {
                     context: "dictionary item contract named key",
                     error: "not a hash-addr".to_string(),
                 })?;
                 Ok(DictionaryItemIdentifier::new_from_contract_info(
                     hash_addr,
+                    dictionary_name.to_string(),
+                    dictionary_item_key.to_string(),
+                ))
+            }
+            DictionaryItemStrParams::EntityNamedKey {
+                entity_addr,
+                dictionary_name,
+                dictionary_item_key,
+            } => {
+                let key = Key::from_formatted_str(entity_addr).map_err(|error| {
+                    CliError::FailedToParseKey {
+                        context: "dictionary item entity named key",
+                        error,
+                    }
+                })?;
+
+                let entity_addr = if let Key::AddressableEntity(addr) = key {
+                    addr
+                } else {
+                    return Err(CliError::InvalidArgument {
+                        context: "dictionary item entity named key",
+                        error: "not a entity-addr".to_string(),
+                    });
+                };
+                Ok(DictionaryItemIdentifier::new_from_entity_info(
+                    entity_addr,
                     dictionary_name.to_string(),
                     dictionary_item_key.to_string(),
                 ))

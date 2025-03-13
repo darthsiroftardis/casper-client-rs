@@ -9,6 +9,17 @@ pub(crate) mod speculative_exec;
 
 // The following RPCs are all unchanged from v1.4.5, so we just re-export them.
 
+pub(crate) mod get_account {
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
+    #[allow(unused_imports)]
+    pub use crate::rpcs::v1_4_5::get_account::GetAccountResult;
+    // This lint should be re-enabled once the client is updated to handle multiple different node
+    // node versions.
+    #[allow(unused_imports)]
+    pub(crate) use crate::rpcs::v1_4_5::get_account::{GetAccountParams, GET_ACCOUNT_METHOD};
+}
+
 pub(crate) mod get_auction_info {
     pub use crate::rpcs::v1_4_5::get_auction_info::GetAuctionInfoResult;
     pub(crate) use crate::rpcs::v1_4_5::get_auction_info::{
@@ -34,12 +45,8 @@ pub(crate) mod get_block_transfers {
 }
 
 pub(crate) mod get_dictionary_item {
-    pub use crate::rpcs::v1_4_5::get_dictionary_item::{
-        DictionaryItemIdentifier, GetDictionaryItemResult,
-    };
-    pub(crate) use crate::rpcs::v1_4_5::get_dictionary_item::{
-        GetDictionaryItemParams, GET_DICTIONARY_ITEM_METHOD,
-    };
+    pub use crate::rpcs::v1_4_5::get_dictionary_item::GetDictionaryItemResult;
+    pub(crate) use crate::rpcs::v1_4_5::get_dictionary_item::GET_DICTIONARY_ITEM_METHOD;
 }
 
 pub(crate) mod get_era_info {
@@ -81,5 +88,10 @@ pub(crate) mod put_deploy {
 }
 
 pub(crate) mod query_global_state {
-    pub use crate::rpcs::v1_4_5::query_global_state::GlobalStateIdentifier;
+    pub use crate::rpcs::v1_4_5::query_global_state::{
+        GlobalStateIdentifier, QueryGlobalStateResult,
+    };
+    pub(crate) use crate::rpcs::v1_4_5::query_global_state::{
+        QueryGlobalStateParams, QUERY_GLOBAL_STATE_METHOD,
+    };
 }

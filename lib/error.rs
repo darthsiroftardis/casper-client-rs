@@ -1,48 +1,31 @@
-#[cfg(feature = "std-fs-io")]
 use std::{io, path::PathBuf};
 
 use thiserror::Error;
 
 use casper_types::{bytesrepr::Error as ToBytesError, crypto, Key};
 #[cfg(doc)]
-use casper_types::{CLValue, URef};
+use casper_types::{CLValue, Deploy, TimeDiff, Timestamp, URef};
 
-#[cfg(doc)]
-use crate::types::{Deploy, DeployBuilder, TimeDiff, Timestamp};
-use crate::{validation::ValidateResponseError, JsonRpcId};
+use crate::{
+    cli::{DeployBuilderError, TransactionV1BuilderError},
+    validation::ValidateResponseError,
+    JsonRpcId,
+};
 
 /// Errors that may be returned by `casper_client` functions.
 #[derive(Error, Debug)]
 pub enum Error {
     /// [`Deploy`] size too large.
-    #[error("deploy size of {actual_deploy_size} bytes exceeds limit of {max_deploy_size}")]
-    DeploySizeTooLarge {
-        /// The maximum permitted serialized deploy size, in bytes.
-        max_deploy_size: u32,
-        /// The serialized size of the deploy provided, in bytes.
-        actual_deploy_size: usize,
-    },
+    #[error(transparent)]
+    DeploySize(#[from] casper_types::DeployExcessiveSizeError),
 
-    /// Failed to build [`Deploy`] due to missing session account.
-    ///
-    /// Call [`DeployBuilder::with_account`] or [`DeployBuilder::with_secret_key`] before
-    /// calling [`DeployBuilder::build`].
-    #[error("deploy requires session account - use `with_account` or `with_secret_key`")]
-    DeployMissingSessionAccount,
+    /// Failed to build [`Deploy`].
+    #[error(transparent)]
+    DeployBuild(#[from] DeployBuilderError),
 
-    /// Failed to build [`Deploy`] due to missing timestamp.
-    ///
-    /// Call [`DeployBuilder::with_timestamp`] before calling [`DeployBuilder::build`].
-    #[error("deploy requires timestamp - use `with_timestamp`")]
-    DeployMissingTimestamp,
-
-    /// Failed to build [`Deploy`] due to missing payment code.
-    ///
-    /// Call [`DeployBuilder::with_standard_payment`] or [`DeployBuilder::with_payment`] before
-    /// calling [`DeployBuilder::build`].
-    #[error("deploy requires payment code - use `with_payment` or `with_standard_payment`")]
-    DeployMissingPaymentCode,
-
+    /// Failed to build Transaction
+    #[error(transparent)]
+    TransactionBuild(#[from] TransactionV1BuilderError),
     /// Invalid [`Key`] variant.
     #[error("expected {} but got {}", .expected_variant, .actual)]
     InvalidKeyVariant {
@@ -132,7 +115,6 @@ pub enum Error {
     },
 
     /// Failed to create new file because it already exists.
-    #[cfg(feature = "std-fs-io")]
     #[error("file at {} already exists", .0.display())]
     FileAlreadyExists(PathBuf),
 
@@ -145,7 +127,6 @@ pub enum Error {
     UnsupportedAlgorithm(String),
 
     /// Context-adding wrapper for `std::io::Error`.
-    #[cfg(feature = "std-fs-io")]
     #[error("input/output error: {context}: {error}")]
     IoError {
         /// Contextual description of where this error occurred including relevant paths,
@@ -172,6 +153,27 @@ pub enum Error {
     /// Failed to validate response.
     #[error("invalid response: {0}")]
     ResponseFailedValidation(#[from] ValidateResponseError),
+
+    /// An error that occurs when attempting to use a non UTF-8 string for a transaction.
+    #[error("invalid UTF-8 string: {context}: {error}")]
+    Utf8Error {
+        /// Contextual description of where this error occurred.
+        context: &'static str,
+        /// Underlying error.
+        error: std::str::Utf8Error,
+    },
+
+    /// Failed to verify contract.
+    #[error("contract verification failed")]
+    ContractVerificationFailed,
+
+    /// Failed to construct HTTP client.
+    #[error("failed to construct HTTP client")]
+    FailedToConstructHttpClient,
+
+    /// Failed to parse provided node address as URL.
+    #[error("failed to parse node address as valid URL")]
+    FailedToParseNodeAddress,
 }
 
 impl From<ToBytesError> for Error {

@@ -8,10 +8,20 @@ use crate::{command::ClientCommand, common, Success};
 
 pub struct PutDeploy;
 
+static DEPRECATION_WARNING: &str = r#"
+#################################### WARNING ####################################
+#                                                                               #
+#        put-deploy subcommand is deprecated in favor of put-transaction        #
+#                    and will be removed in a future release                    #
+#                                                                               #
+#################################################################################
+"#;
+
 #[async_trait]
 impl ClientCommand for PutDeploy {
     const NAME: &'static str = "put-deploy";
-    const ABOUT: &'static str = "Create a deploy and send it to the network for execution";
+    const ABOUT: &'static str =
+        "[DEPRECATED: use `put-transaction` instead] Create a deploy and send it to the network for execution";
 
     fn build(display_order: usize) -> Command {
         let subcommand = Command::new(Self::NAME)
@@ -19,13 +29,17 @@ impl ClientCommand for PutDeploy {
             .display_order(display_order)
             .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
             .arg(common::rpc_id::arg(DisplayOrder::RpcId as usize))
-            .arg(creation_common::speculative_exec::arg());
+            .arg(creation_common::speculative_exec::arg())
+            .arg(creation_common::gas_price::arg());
         let subcommand = creation_common::apply_common_session_options(subcommand);
         let subcommand = creation_common::apply_common_payment_options(subcommand, None);
         creation_common::apply_common_creation_options(subcommand, true, true)
     }
 
     async fn run(matches: &ArgMatches) -> Result<Success, CliError> {
+        // show deprecation warning for each use of `put-deploy` subcommand
+        println!("{DEPRECATION_WARNING}");
+
         creation_common::show_simple_arg_examples_and_exit_if_required(matches);
         creation_common::show_json_args_examples_and_exit_if_required(matches);
 
@@ -34,18 +48,17 @@ impl ClientCommand for PutDeploy {
         let verbosity_level = common::verbose::get(matches);
 
         let secret_key = common::secret_key::get(matches).unwrap_or_default();
-        let maybe_speculative_exec = creation_common::speculative_exec::get(matches);
+        let is_speculative_exec = creation_common::speculative_exec::get(matches);
         let timestamp = creation_common::timestamp::get(matches);
         let ttl = creation_common::ttl::get(matches);
         let chain_name = creation_common::chain_name::get(matches);
         let session_account = creation_common::session_account::get(matches)?;
-
+        let gas_price = creation_common::gas_price::get(matches);
         let session_str_params = creation_common::session_str_params(matches);
         let payment_str_params = creation_common::payment_str_params(matches);
 
-        if let Some(speculative_exec) = maybe_speculative_exec {
+        if is_speculative_exec {
             casper_client::cli::speculative_put_deploy(
-                speculative_exec,
                 maybe_rpc_id,
                 node_address,
                 verbosity_level,
@@ -55,6 +68,7 @@ impl ClientCommand for PutDeploy {
                     ttl,
                     chain_name,
                     session_account: &session_account,
+                    gas_price_tolerance: gas_price,
                 },
                 session_str_params,
                 payment_str_params,
@@ -72,6 +86,7 @@ impl ClientCommand for PutDeploy {
                     ttl,
                     chain_name,
                     session_account: &session_account,
+                    gas_price_tolerance: gas_price,
                 },
                 session_str_params,
                 payment_str_params,

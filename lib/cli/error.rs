@@ -1,18 +1,19 @@
-use std::num::ParseIntError;
+use std::{num::ParseIntError, str::ParseBoolError};
 
+use base16::DecodeError;
 use humantime::{DurationError, TimestampError};
 use thiserror::Error;
 
 #[cfg(doc)]
-use casper_types::{account::AccountHash, Key, NamedArg, PublicKey, RuntimeArgs, URef};
+use casper_types::{
+    account::AccountHash, Key, NamedArg, PublicKey, RuntimeArgs, TimeDiff, Timestamp, URef,
+};
 use casper_types::{CLValueError, KeyFromStrError, UIntParseError, URefFromStrError};
+pub use uint::FromDecStrErr;
 
 use crate::cli::JsonArgsError;
 #[cfg(doc)]
-use crate::{
-    rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier},
-    types::{TimeDiff, Timestamp},
-};
+use crate::rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier};
 
 /// Error that can be returned by the `cli` API.
 #[derive(Error, Debug)]
@@ -41,7 +42,16 @@ pub enum CliError {
         /// Contextual description of where this error occurred.
         context: &'static str,
         /// The actual error raised.
-        error: casper_types::account::FromStrError,
+        error: casper_types::addressable_entity::FromStrError,
+    },
+
+    /// Failed to parse an [`casper_types::AddressableEntityHash`] from a formatted string.
+    #[error("failed to parse {context} as an addressable entity hash: {error}")]
+    FailedToParseAddressableEntityHash {
+        /// Contextual description of where this error occurred.
+        context: &'static str,
+        /// The actual error raised.
+        error: casper_types::addressable_entity::FromStrError,
     },
 
     /// Failed to parse a [`URef`] from a formatted string.
@@ -62,6 +72,26 @@ pub enum CliError {
         context: &'static str,
         /// The actual error raised.
         error: ParseIntError,
+    },
+
+    /// Failed to parse a bool from a string.
+    #[error("failed to parse '{context}' as a bool: {error}")]
+    FailedToParseBool {
+        /// Contextual description of where this error occurred including relevant paths,
+        /// filenames, etc.
+        context: &'static str,
+        /// The actual error raised.
+        error: ParseBoolError,
+    },
+
+    /// Failed to parse an integer from a string.
+    #[error("failed to parse '{context}' as an integer: {error}")]
+    FailedToParseDec {
+        /// Contextual description of where this error occurred including relevant paths,
+        /// filenames, etc.
+        context: &'static str,
+        /// The actual error raised.
+        error: FromDecStrErr,
     },
 
     /// Failed to parse a [`TimeDiff`] from a formatted string.
@@ -101,7 +131,7 @@ pub enum CliError {
         /// filenames, etc.
         context: &'static str,
         /// The actual error raised.
-        error: casper_hashing::Error,
+        error: casper_types::DigestError,
     },
 
     /// Failed to create a [`GlobalStateIdentifier`].
@@ -146,6 +176,26 @@ pub enum CliError {
     /// Core error.
     #[error(transparent)]
     Core(#[from] crate::Error),
+
+    /// Failed to parse a package address
+    #[error("Failed to parse a package address")]
+    FailedToParsePackageAddr,
+
+    /// Failed to parse a transfer target
+    #[error("Failed to parse a transfer target")]
+    FailedToParseTransferTarget,
+
+    /// Failed to parse a validator public key.
+    #[error("Failed to parse a validator public key")]
+    FailedToParseValidatorPublicKey,
+
+    /// Failed to parse base16 bytes.
+    #[error("Failed to parse base16 bytes: {0}")]
+    FailedToParseBase16(#[from] DecodeError),
+
+    /// Unexpected transaction args variant.
+    #[error("Unexpected transaction args variant")]
+    UnexpectedTransactionArgsVariant,
 }
 
 impl From<CLValueError> for CliError {
