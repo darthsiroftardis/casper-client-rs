@@ -6,7 +6,7 @@ use std::process;
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
 use casper_client::cli::{
-    json_args_help, simple_args_help, CliError, TransactionBuilderParams, TransactionStrParams,
+    json_args_help, simple_args_help, CliError, TransactionStrParams,
 };
 use casper_types::TransactionRuntimeParams;
 use transaction_runtime::TransactionRuntime;
