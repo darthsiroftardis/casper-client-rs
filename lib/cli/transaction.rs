@@ -343,7 +343,7 @@ pub fn make_transaction_builder(
 
             Ok(transaction_builder)
         }
-        TransactionBuilderParams::WithdrawBid { public_key, amount } => {
+        TransactionBuilderParams::WithdrawBid { public_key, amount , .. } => {
             let transaction_builder = TransactionV1Builder::new_withdraw_bid(public_key, amount)?;
             Ok(transaction_builder)
         }

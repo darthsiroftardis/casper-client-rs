@@ -196,6 +196,14 @@ pub enum CliError {
     /// Unexpected transaction args variant.
     #[error("Unexpected transaction args variant")]
     UnexpectedTransactionArgsVariant,
+
+    /// Failed to get auction info to determine validator stake.
+    #[error("Failed to get auction state")]
+    FailedToGetAuctionState,
+
+    /// Attempting to withdraw bid will reduce stake below the minimum amount.
+    #[error("Attempting to withdraw bid will reduce stake below the minimum amount.")]
+    ReducedStakeBelowMinAmount
 }
 
 impl From<CLValueError> for CliError {

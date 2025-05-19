@@ -139,6 +139,8 @@ pub enum TransactionBuilderParams<'a> {
         public_key: PublicKey,
         /// The amount to be withdrawn in the withdraw bid transaction
         amount: U512,
+        /// Override the min bid amount check
+        min_bid_override: bool,
     },
     /// Parameters for the activate bid variant of the transaction builder
     ActivateBid {

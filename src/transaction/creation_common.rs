@@ -64,6 +64,7 @@ pub(super) enum DisplayOrder {
     Delegator,
     EntityAddr,
     ContractHash,
+    MinBidOverride,
     RpcId,
     Verbose,
 }
@@ -926,7 +927,7 @@ pub(super) mod public_key {
         common::public_key::try_read_from_file(value)
     }
 
-    pub(super) fn parse_public_key(value: &str) -> Result<PublicKey, CliError> {
+    pub(crate) fn parse_public_key(value: &str) -> Result<PublicKey, CliError> {
         let public_key =
             PublicKey::from_hex(value).map_err(|error| casper_client::Error::CryptoError {
                 context: "session account",
@@ -974,6 +975,28 @@ pub(super) mod new_public_key {
             })?;
         Ok(public_key)
     }
+}
+
+pub(super) mod min_bid_override {
+    use super::*;
+
+    const ARG_NAME: &str = "min-bid-override";
+
+    const ARG_HELP: &str = "Flag to override the min bid staking amount check";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .action(ArgAction::SetTrue)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::MinBidOverride as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> bool {
+        matches.get_flag(ARG_NAME)
+    }
+
 }
 
 pub(super) mod entity_addr {
@@ -1689,6 +1712,49 @@ pub(super) mod activate_bid {
     }
 }
 
+pub(super) mod withdraw_bid_all {
+    use casper_types::U512;
+    use super::*;
+    use crate::cli::TransactionBuilderParams;
+    use casper_client::cli::CliError;
+
+    pub const NAME: &str = "withdraw-bid-all";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str = "Creates a new withdraw-bid transaction which completely unbonds the validator";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+        amount: U512,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let public_key_str = public_key::get(matches)?;
+        let public_key = public_key::parse_public_key(&public_key_str)?;
+
+        let params = TransactionBuilderParams::WithdrawBid { public_key, amount , min_bid_override: true };
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(withdraw_bid_subcommand: Command) -> Command {
+        withdraw_bid_subcommand
+            .arg(public_key::arg(DisplayOrder::PublicKey as usize))
+    }
+}
+
 pub(super) mod withdraw_bid {
     use super::*;
     use crate::cli::TransactionBuilderParams;
@@ -1721,7 +1787,9 @@ pub(super) mod withdraw_bid {
         let amount_str = transaction_amount::get(matches);
         let amount = transaction_amount::parse_transaction_amount(amount_str)?;
 
-        let params = TransactionBuilderParams::WithdrawBid { public_key, amount };
+        let min_bid_override = min_bid_override::get(matches);
+
+        let params = TransactionBuilderParams::WithdrawBid { public_key, amount, min_bid_override};
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
         Ok((params, transaction_str_params))
@@ -1730,6 +1798,7 @@ pub(super) mod withdraw_bid {
     fn add_args(withdraw_bid_subcommand: Command) -> Command {
         withdraw_bid_subcommand
             .arg(public_key::arg(DisplayOrder::PublicKey as usize))
+            .arg(min_bid_override::arg())
             .arg(transaction_amount::arg())
     }
 }
@@ -2553,34 +2622,7 @@ pub(super) fn add_rpc_args(subcommand: Command) -> Command {
         .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
 }
 
-pub(super) fn parse_rpc_args_and_run(
-    matches: &ArgMatches,
-    subcommand_run: fn(
-        &ArgMatches,
-    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError>,
-) -> Result<
-    (
-        TransactionBuilderParams,
-        TransactionStrParams,
-        &str,
-        &str,
-        u64,
-    ),
-    CliError,
-> {
-    let node_address = common::node_address::get(matches);
-    let rpc_id = common::rpc_id::get(matches);
-    let verbosity_level = common::verbose::get(matches);
 
-    let (transaction_builder_params, transaction_str_params) = subcommand_run(matches)?;
-    Ok((
-        transaction_builder_params,
-        transaction_str_params,
-        node_address,
-        rpc_id,
-        verbosity_level,
-    ))
-}
 
 fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimeParams, CliError> {
     let runtime_tag = transaction_runtime::get(matches)
