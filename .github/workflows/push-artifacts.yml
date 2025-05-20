@@ -16,8 +16,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            code_name: focal
+          - os: ubuntu-22.04
+            code_name: jammy
 
     runs-on: ${{ matrix.os }}
 
@@ -51,6 +51,13 @@ jobs:
       - name: Upload artifacts to S3
         run: aws s3 sync ./target/artifacts/ s3://${{ secrets.AWS_BUCKET_GENESIS }}/artifacts/casper-client/$(git rev-parse HEAD)/
 
+      - name: Upload artifacts to S3
+        run: aws s3 sync ./target/latest/ s3://${{ secrets.AWS_BUCKET_GENESIS }}/artifacts/casper-client/
+
       # Required in case of overwrite
       - name: Invalidate CloudFront cache
         run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_GENESIS }} --paths "/artifacts/casper-client/$(git rev-parse HEAD)/*"
+
+      # Required in case of overwrite
+      - name: Invalidate CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_CLOUDFRONT_GENESIS }} --paths "/artifacts/casper-client/$(git branch --show-current).latest"
