@@ -358,6 +358,7 @@ impl<'a> TransactionV1Builder<'a> {
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
+        #[allow(deprecated)]
         let id = TransactionInvocationTarget::new_package(hash, version);
         Self::new_targeting_stored(id, entry_point, runtime)
     }
@@ -370,6 +371,7 @@ impl<'a> TransactionV1Builder<'a> {
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
+        #[allow(deprecated)]
         let id = TransactionInvocationTarget::new_package_alias(alias.into(), version);
         Self::new_targeting_stored(id, entry_point, runtime)
     }
