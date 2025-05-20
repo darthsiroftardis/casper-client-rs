@@ -3,11 +3,18 @@ use clap::{ArgMatches, Command};
 use serde::{Deserialize, Serialize};
 
 use casper_client::cli::{CliError, TransactionBuilderParams};
-use casper_types::{ActivationPoint, CoreConfig, HighwayConfig, ProtocolVersion, StorageCosts, SystemConfig, TransactionConfig, U512, VacancyConfig, WasmConfig};
+use casper_types::{
+    ActivationPoint, CoreConfig, HighwayConfig, ProtocolVersion, StorageCosts, SystemConfig,
+    TransactionConfig, VacancyConfig, WasmConfig, U512,
+};
 
-use super::creation_common::{activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate, invocable_entity, invocable_entity_alias, package, package_alias, public_key, redelegate, session, transfer, undelegate, withdraw_bid, withdraw_bid_all};
+use super::creation_common::{
+    activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
+    invocable_entity, invocable_entity_alias, package, package_alias, public_key, redelegate,
+    session, transfer, undelegate, withdraw_bid, withdraw_bid_all,
+};
 
-use crate::{command::ClientCommand, Success, common};
+use crate::{command::ClientCommand, common, Success};
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
 // Disallow unknown fields to ensure config files and command-line overrides contain valid keys.
@@ -41,7 +48,6 @@ pub(super) struct TomlChainspec {
     vacancy: VacancyConfig,
     storage_costs: StorageCosts,
 }
-
 
 pub struct PutTransaction;
 const ALIAS: &str = "put-txn";
@@ -77,48 +83,37 @@ impl ClientCommand for PutTransaction {
 
     async fn run(matches: &ArgMatches) -> Result<Success, CliError> {
         match matches.subcommand() {
-            None => {
-                Err(CliError::InvalidArgument {
-                    context: "Make Transaction",
-                    error: "failure to provide recognized subcommand".to_string(),
-                })
-            }
-            Some((subcommand, arg_matches)) => {
-                match subcommand {
-                    add_bid::NAME => put_add_bid_transaction(arg_matches).await,
-                    activate_bid::NAME => put_activate_bid_transaction(arg_matches).await,
-                    withdraw_bid_all::NAME => put_withdraw_all_transaction(arg_matches).await,
-                    withdraw_bid::NAME => put_withdraw_bid_transaction(arg_matches).await,
-                    delegate::NAME => put_delegate_transaction(arg_matches).await,
-                    undelegate::NAME => put_undelegate_transaction(arg_matches).await,
-                    redelegate::NAME => put_redelegate_transaction(arg_matches).await,
-                    change_bid_public_key::NAME => {
-                        put_change_public_key_transaction(arg_matches).await
-                    }
-                    add_reservations::NAME => put_add_reservations_transaction(arg_matches).await,
-                    cancel_reservations::NAME => {
-                        put_cancel_reservations_transaction(arg_matches).await
-                    }
-                    invocable_entity::NAME => put_entity_by_hash_transaction(arg_matches).await,
-                    invocable_entity_alias::NAME => {
-                        put_entity_by_name_transaction(arg_matches).await
-                    }
-                    package::NAME => put_by_package_hash_transaction(arg_matches).await,
-                    package_alias::NAME => put_package_by_name_transaction(arg_matches).await,
-                    session::NAME => put_session_transaction(arg_matches).await,
-                    transfer::NAME => put_transfer_transaction(arg_matches).await,
-                    _ => {
-                        return Err(CliError::InvalidArgument {
-                            context: "Make Transaction",
-                            error: "failure to provide recognized subcommand".to_string(),
-                        })
-                    }
+            None => Err(CliError::InvalidArgument {
+                context: "Make Transaction",
+                error: "failure to provide recognized subcommand".to_string(),
+            }),
+            Some((subcommand, arg_matches)) => match subcommand {
+                add_bid::NAME => put_add_bid_transaction(arg_matches).await,
+                activate_bid::NAME => put_activate_bid_transaction(arg_matches).await,
+                withdraw_bid_all::NAME => put_withdraw_all_transaction(arg_matches).await,
+                withdraw_bid::NAME => put_withdraw_bid_transaction(arg_matches).await,
+                delegate::NAME => put_delegate_transaction(arg_matches).await,
+                undelegate::NAME => put_undelegate_transaction(arg_matches).await,
+                redelegate::NAME => put_redelegate_transaction(arg_matches).await,
+                change_bid_public_key::NAME => put_change_public_key_transaction(arg_matches).await,
+                add_reservations::NAME => put_add_reservations_transaction(arg_matches).await,
+                cancel_reservations::NAME => put_cancel_reservations_transaction(arg_matches).await,
+                invocable_entity::NAME => put_entity_by_hash_transaction(arg_matches).await,
+                invocable_entity_alias::NAME => put_entity_by_name_transaction(arg_matches).await,
+                package::NAME => put_by_package_hash_transaction(arg_matches).await,
+                package_alias::NAME => put_package_by_name_transaction(arg_matches).await,
+                session::NAME => put_session_transaction(arg_matches).await,
+                transfer::NAME => put_transfer_transaction(arg_matches).await,
+                _ => {
+                    return Err(CliError::InvalidArgument {
+                        context: "Make Transaction",
+                        error: "failure to provide recognized subcommand".to_string(),
+                    })
                 }
-            }
+            },
         }
     }
 }
-
 
 async fn put_add_bid_transaction(matches: &ArgMatches) -> Result<Success, CliError> {
     let node_address = common::node_address::get(matches);
@@ -133,11 +128,9 @@ async fn put_add_bid_transaction(matches: &ArgMatches) -> Result<Success, CliErr
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
-
-
 
 async fn put_activate_bid_transaction(matches: &ArgMatches) -> Result<Success, CliError> {
     let node_address = common::node_address::get(matches);
@@ -152,9 +145,8 @@ async fn put_activate_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
-
+    .await
+    .map(Success::from)
 }
 
 async fn put_withdraw_all_transaction(matches: &ArgMatches) -> Result<Success, CliError> {
@@ -165,21 +157,20 @@ async fn put_withdraw_all_transaction(matches: &ArgMatches) -> Result<Success, C
     let public_key_str = public_key::get(matches)?;
     let public_key = public_key::parse_public_key(&public_key_str)?;
 
-    let (transaction_builder_params, transaction_str_params) = match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
-        .await?
-        .result
-        .auction_state
-        .bids()
-        .find(|(bid_key, _bid)| **bid_key == public_key) {
-        Some((_, bid)) => {
-            let staked_amount = *bid.staked_amount();
-            withdraw_bid_all::run(matches, staked_amount)?
-
-        },
-        None => {
-            return Err(CliError::FailedToGetAuctionState)
-        }
-    };
+    let (transaction_builder_params, transaction_str_params) =
+        match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
+            .await?
+            .result
+            .auction_state
+            .bids()
+            .find(|(bid_key, _bid)| **bid_key == public_key)
+        {
+            Some((_, bid)) => {
+                let staked_amount = *bid.staked_amount();
+                withdraw_bid_all::run(matches, staked_amount)?
+            }
+            None => return Err(CliError::FailedToGetAuctionState),
+        };
 
     casper_client::cli::put_transaction(
         rpc_id,
@@ -188,10 +179,9 @@ async fn put_withdraw_all_transaction(matches: &ArgMatches) -> Result<Success, C
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
-
 
 async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, CliError> {
     let node_address = common::node_address::get(matches);
@@ -200,43 +190,43 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
 
     let (transaction_builder_params, transaction_str_params) = withdraw_bid::run(matches)?;
 
-    if let TransactionBuilderParams::WithdrawBid {  public_key, amount, min_bid_override } = &transaction_builder_params {
-
-        let chainspec_bytes =  casper_client::cli::get_chainspec("", node_address, verbosity_level).await?
+    if let TransactionBuilderParams::WithdrawBid {
+        public_key,
+        amount,
+        min_bid_override,
+    } = &transaction_builder_params
+    {
+        let chainspec_bytes = casper_client::cli::get_chainspec("", node_address, verbosity_level)
+            .await?
             .result
             .chainspec_bytes;
 
         let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes()).unwrap();
-        let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str)
-            .unwrap();
+        let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str).unwrap();
 
-        let minimum_validator_bid = toml_chainspec
-            .core
-            .minimum_bid_amount;
+        let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
         match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
             .await?
             .result
             .auction_state
             .bids()
-            .find(|(bid_key, _bid)| **bid_key == *public_key) {
+            .find(|(bid_key, _bid)| **bid_key == *public_key)
+        {
             Some((_, bid)) => {
                 let staked_amount = *bid.staked_amount();
                 let remainder = staked_amount.saturating_sub(*amount);
                 if remainder < U512::from(minimum_validator_bid) {
                     if !min_bid_override {
-                        return Err(CliError::ReducedStakeBelowMinAmount)
+                        return Err(CliError::ReducedStakeBelowMinAmount);
                     } else {
                         println!("[WARN] Execution of this withdraw bid will result in unbonding of all stake")
                     }
                 }
-            },
-            None => {
-                return Err(CliError::FailedToGetAuctionState)
             }
+            None => return Err(CliError::FailedToGetAuctionState),
         };
     }
-
 
     casper_client::cli::put_transaction(
         rpc_id,
@@ -245,9 +235,8 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
-
+    .await
+    .map(Success::from)
 }
 
 async fn put_delegate_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -263,8 +252,8 @@ async fn put_delegate_transaction(arg_matches: &ArgMatches) -> Result<Success, C
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_undelegate_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -280,8 +269,8 @@ async fn put_undelegate_transaction(arg_matches: &ArgMatches) -> Result<Success,
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_redelegate_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -297,8 +286,8 @@ async fn put_redelegate_transaction(arg_matches: &ArgMatches) -> Result<Success,
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_change_public_key_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -306,7 +295,8 @@ async fn put_change_public_key_transaction(arg_matches: &ArgMatches) -> Result<S
     let rpc_id = common::rpc_id::get(arg_matches);
     let verbosity_level = common::verbose::get(arg_matches);
 
-    let (transaction_builder_params, transaction_str_params) = change_bid_public_key::run(arg_matches)?;
+    let (transaction_builder_params, transaction_str_params) =
+        change_bid_public_key::run(arg_matches)?;
     casper_client::cli::put_transaction(
         rpc_id,
         node_address,
@@ -314,8 +304,8 @@ async fn put_change_public_key_transaction(arg_matches: &ArgMatches) -> Result<S
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_add_reservations_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -331,15 +321,18 @@ async fn put_add_reservations_transaction(arg_matches: &ArgMatches) -> Result<Su
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
-async fn put_cancel_reservations_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
+async fn put_cancel_reservations_transaction(
+    arg_matches: &ArgMatches,
+) -> Result<Success, CliError> {
     let node_address = common::node_address::get(arg_matches);
     let rpc_id = common::rpc_id::get(arg_matches);
     let verbosity_level = common::verbose::get(arg_matches);
 
-    let (transaction_builder_params, transaction_str_params) = cancel_reservations::run(arg_matches)?;
+    let (transaction_builder_params, transaction_str_params) =
+        cancel_reservations::run(arg_matches)?;
     casper_client::cli::put_transaction(
         rpc_id,
         node_address,
@@ -347,8 +340,8 @@ async fn put_cancel_reservations_transaction(arg_matches: &ArgMatches) -> Result
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_entity_by_hash_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -364,8 +357,8 @@ async fn put_entity_by_hash_transaction(arg_matches: &ArgMatches) -> Result<Succ
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_entity_by_name_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -373,7 +366,8 @@ async fn put_entity_by_name_transaction(arg_matches: &ArgMatches) -> Result<Succ
     let rpc_id = common::rpc_id::get(arg_matches);
     let verbosity_level = common::verbose::get(arg_matches);
 
-    let (transaction_builder_params, transaction_str_params) = invocable_entity_alias::run(arg_matches)?;
+    let (transaction_builder_params, transaction_str_params) =
+        invocable_entity_alias::run(arg_matches)?;
     casper_client::cli::put_transaction(
         rpc_id,
         node_address,
@@ -381,8 +375,8 @@ async fn put_entity_by_name_transaction(arg_matches: &ArgMatches) -> Result<Succ
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_by_package_hash_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -398,8 +392,8 @@ async fn put_by_package_hash_transaction(arg_matches: &ArgMatches) -> Result<Suc
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_package_by_name_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -415,8 +409,8 @@ async fn put_package_by_name_transaction(arg_matches: &ArgMatches) -> Result<Suc
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_session_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -432,8 +426,8 @@ async fn put_session_transaction(arg_matches: &ArgMatches) -> Result<Success, Cl
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }
 
 async fn put_transfer_transaction(arg_matches: &ArgMatches) -> Result<Success, CliError> {
@@ -449,6 +443,6 @@ async fn put_transfer_transaction(arg_matches: &ArgMatches) -> Result<Success, C
         transaction_builder_params,
         transaction_str_params,
     )
-        .await
-        .map(Success::from)
+    .await
+    .map(Success::from)
 }

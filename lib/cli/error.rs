@@ -207,7 +207,7 @@ pub enum CliError {
 
     /// Failed to parse the chainspec as raw bytes.
     #[error("Failed to parse the chainspec as raw bytes")]
-    FailedToParseChainspecBytes
+    FailedToParseChainspecBytes,
 }
 
 impl From<CLValueError> for CliError {

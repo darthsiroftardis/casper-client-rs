@@ -5,9 +5,7 @@ use std::process;
 
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
-use casper_client::cli::{
-    json_args_help, simple_args_help, CliError, TransactionStrParams,
-};
+use casper_client::cli::{json_args_help, simple_args_help, CliError, TransactionStrParams};
 use casper_types::TransactionRuntimeParams;
 use transaction_runtime::TransactionRuntime;
 
@@ -996,7 +994,6 @@ pub(super) mod min_bid_override {
     pub fn get(matches: &ArgMatches) -> bool {
         matches.get_flag(ARG_NAME)
     }
-
 }
 
 pub(super) mod entity_addr {
@@ -1713,16 +1710,17 @@ pub(super) mod activate_bid {
 }
 
 pub(super) mod withdraw_bid_all {
-    use casper_types::U512;
     use super::*;
     use crate::cli::TransactionBuilderParams;
     use casper_client::cli::CliError;
+    use casper_types::U512;
 
     pub const NAME: &str = "withdraw-bid-all";
 
     const ACCEPT_SESSION_ARGS: bool = false;
 
-    const ABOUT: &str = "Creates a new withdraw-bid transaction which completely unbonds the validator";
+    const ABOUT: &str =
+        "Creates a new withdraw-bid transaction which completely unbonds the validator";
     pub fn build() -> Command {
         apply_common_creation_options(
             add_args(Command::new(NAME).about(ABOUT)),
@@ -1743,15 +1741,18 @@ pub(super) mod withdraw_bid_all {
         let public_key_str = public_key::get(matches)?;
         let public_key = public_key::parse_public_key(&public_key_str)?;
 
-        let params = TransactionBuilderParams::WithdrawBid { public_key, amount , min_bid_override: true };
+        let params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override: true,
+        };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
         Ok((params, transaction_str_params))
     }
 
     fn add_args(withdraw_bid_subcommand: Command) -> Command {
-        withdraw_bid_subcommand
-            .arg(public_key::arg(DisplayOrder::PublicKey as usize))
+        withdraw_bid_subcommand.arg(public_key::arg(DisplayOrder::PublicKey as usize))
     }
 }
 
@@ -1789,7 +1790,11 @@ pub(super) mod withdraw_bid {
 
         let min_bid_override = min_bid_override::get(matches);
 
-        let params = TransactionBuilderParams::WithdrawBid { public_key, amount, min_bid_override};
+        let params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override,
+        };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
         Ok((params, transaction_str_params))
@@ -2621,8 +2626,6 @@ pub(super) fn add_rpc_args(subcommand: Command) -> Command {
         ))
         .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
 }
-
-
 
 fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimeParams, CliError> {
     let runtime_tag = transaction_runtime::get(matches)

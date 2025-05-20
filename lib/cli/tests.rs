@@ -756,8 +756,11 @@ mod transaction {
         };
         let transaction_string_params = transaction_str_params;
 
-        let transaction_builder_params =
-            TransactionBuilderParams::WithdrawBid { public_key, amount, min_bid_override: true };
+        let transaction_builder_params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override: true,
+        };
 
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
