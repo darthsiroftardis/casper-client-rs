@@ -9,9 +9,6 @@ use super::creation_common::{activate_bid, add_bid, add_reservations, cancel_res
 
 use crate::{command::ClientCommand, Success, common};
 
-// TODO: Remove this constant and use the chainspec instead.
-const MINIMUM_BID_AMOUNT: u64 = 10_000_000_000_000u64;
-
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
 // Disallow unknown fields to ensure config files and command-line overrides contain valid keys.
 #[serde(deny_unknown_fields)]
@@ -204,6 +201,19 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
     let (transaction_builder_params, transaction_str_params) = withdraw_bid::run(matches)?;
 
     if let TransactionBuilderParams::WithdrawBid {  public_key, amount, min_bid_override } = &transaction_builder_params {
+
+        let chainspec_bytes =  casper_client::cli::get_chainspec("", node_address, verbosity_level).await?
+            .result
+            .chainspec_bytes;
+
+        let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes()).unwrap();
+        let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str)
+            .unwrap();
+
+        let minimum_validator_bid = toml_chainspec
+            .core
+            .minimum_bid_amount;
+
         match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
             .await?
             .result
@@ -213,10 +223,12 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
             Some((_, bid)) => {
                 let staked_amount = *bid.staked_amount();
                 let remainder = staked_amount.saturating_sub(*amount);
-                if remainder < U512::from(MINIMUM_BID_AMOUNT) && !min_bid_override {
-                    return Err(CliError::ReducedStakeBelowMinAmount)
-                } else {
-                    println!("amount will cause unbonding of all stake")
+                if remainder < U512::from(minimum_validator_bid) {
+                    if !min_bid_override {
+                        return Err(CliError::ReducedStakeBelowMinAmount)
+                    } else {
+                        println!("amount will cause unbonding of all stake")
+                    }
                 }
             },
             None => {
