@@ -203,7 +203,11 @@ pub enum CliError {
 
     /// Attempting to withdraw bid will reduce stake below the minimum amount.
     #[error("Attempting to withdraw bid will reduce stake below the minimum amount.")]
-    ReducedStakeBelowMinAmount
+    ReducedStakeBelowMinAmount,
+
+    /// Failed to parse the chainspec as raw bytes.
+    #[error("Failed to parse the chainspec as raw bytes")]
+    FailedToParseChainspecBytes
 }
 
 impl From<CLValueError> for CliError {

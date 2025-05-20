@@ -1,14 +1,47 @@
 use async_trait::async_trait;
-use casper_types::bytesrepr::{FromBytes};
-use casper_types::{Chainspec, U512};
 use clap::{ArgMatches, Command};
-
+use serde::{Deserialize, Serialize};
 
 use casper_client::cli::{CliError, TransactionBuilderParams};
+use casper_types::{ActivationPoint, CoreConfig, HighwayConfig, ProtocolVersion, StorageCosts, SystemConfig, TransactionConfig, U512, VacancyConfig, WasmConfig};
 
 use super::creation_common::{activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate, invocable_entity, invocable_entity_alias, package, package_alias, public_key, redelegate, session, transfer, undelegate, withdraw_bid, withdraw_bid_all};
 
 use crate::{command::ClientCommand, Success, common};
+
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
+// Disallow unknown fields to ensure config files and command-line overrides contain valid keys.
+#[serde(deny_unknown_fields)]
+struct TomlNetwork {
+    name: String,
+    maximum_net_message_size: u32,
+}
+
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
+// Disallow unknown fields to ensure config files and command-line overrides contain valid keys.
+#[serde(deny_unknown_fields)]
+struct TomlProtocol {
+    version: ProtocolVersion,
+    hard_reset: bool,
+    activation_point: ActivationPoint,
+}
+
+/// A chainspec configuration as laid out in the TOML-encoded configuration file.
+#[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
+// Disallow unknown fields to ensure config files and command-line overrides contain valid keys.
+#[serde(deny_unknown_fields)]
+pub(super) struct TomlChainspec {
+    protocol: TomlProtocol,
+    network: TomlNetwork,
+    core: CoreConfig,
+    transactions: TransactionConfig,
+    highway: HighwayConfig,
+    wasm: WasmConfig,
+    system_costs: SystemConfig,
+    vacancy: VacancyConfig,
+    storage_costs: StorageCosts,
+}
+
 
 pub struct PutTransaction;
 const ALIAS: &str = "put-txn";
@@ -173,15 +206,12 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
             .result
             .chainspec_bytes;
 
-        let chainspec = match Chainspec::from_bytes(chainspec_bytes.chainspec_bytes())  {
-            Ok((chainspec, _)) => { chainspec}
-            Err(_) => {
-                return Err(CliError::UnexpectedTransactionArgsVariant)
-            }
-        };
+        let toml_chainspec: TomlChainspec =
+            toml::from_str(std::str::from_utf8(&chainspec_bytes.chainspec_bytes()).unwrap())
+                .map_err(|_| CliError::FailedToParseChainspecBytes)?;
 
-        let min_validator_bid_amount = chainspec
-            .core_config
+        let min_validator_bid_amount = toml_chainspec
+            .core
             .minimum_bid_amount;
 
         match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")

@@ -54,6 +54,7 @@ tar = { version = "0.4.41", default-features = false }
 thiserror = "1"
 tokio = { version = "1.39.3", features = ["macros", "rt", "sync", "time"] }
 uint = "0.9.5"
+toml = "0.8.22"
 
 [dev-dependencies]
 tempfile = "3.8.1"
