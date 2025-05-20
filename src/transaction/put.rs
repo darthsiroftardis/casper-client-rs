@@ -227,7 +227,7 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
                     if !min_bid_override {
                         return Err(CliError::ReducedStakeBelowMinAmount)
                     } else {
-                        println!("amount will cause unbonding of all stake")
+                        println!("[WARN] Execution of this withdraw bid will result in unbonding of all stake")
                     }
                 }
             },
