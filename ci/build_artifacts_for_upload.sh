@@ -15,11 +15,16 @@ else
 fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+LATEST_DIR="$ROOT_DIR/target/latest/"
 ARTIFACT_DIR="$ROOT_DIR/target/artifacts/"
 DEBIAN_DIR="$ROOT_DIR/target/debian/"
 GIT_HASH=$(git rev-parse HEAD)
 BRANCH_NAME=$(git branch --show-current)
 CLIENT_VERSION=$(cat "$ROOT_DIR/Cargo.toml" | python3 -c "import sys, toml; print(toml.load(sys.stdin)['package']['version'])")
+
+echo "Creating $BRANCH_NAME.latest file"
+mkdir -p "$LATEST_DIR"
+echo -n "$GIT_HASH" > "$LATEST_DIR/$BRANCH_NAME.latest"
 
 # Expect debian built in CI
 echo "Copying debian"
