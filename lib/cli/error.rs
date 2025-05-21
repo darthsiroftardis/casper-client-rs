@@ -208,6 +208,10 @@ pub enum CliError {
     /// Failed to parse the chainspec as raw bytes.
     #[error("Failed to parse the chainspec as raw bytes")]
     FailedToParseChainspecBytes,
+
+    /// Missing major version.
+    #[error("Major version is missing when specifying entity version")]
+    MissingMajorVersion,
 }
 
 impl From<CLValueError> for CliError {

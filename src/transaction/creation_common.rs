@@ -1220,11 +1220,8 @@ pub(super) mod major_version {
             .display_order(DisplayOrder::MajorVersion as usize)
     }
 
-    pub fn get(matches: &ArgMatches) -> u32 {
-        matches
-            .get_one::<u32>(ARG_NAME)
-            .map(get_deref_helper)
-            .unwrap_or_default()
+    pub fn get(matches: &ArgMatches) -> Option<u32> {
+        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper)
     }
 
     fn get_deref_helper(get_result: &u32) -> u32 {
@@ -2285,8 +2282,10 @@ pub(super) mod package {
         let runtime = get_transaction_runtime(matches)?;
 
         let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
-            let major = major_version::get(matches);
-            Some(EntityVersionKey::new(major, entity_version))
+            match major_version::get(matches) {
+                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
+                None => return Err(CliError::MissingMajorVersion),
+            }
         } else {
             None
         };
@@ -2347,8 +2346,10 @@ pub(super) mod package_alias {
         let maybe_entity_version = session_version::get(matches);
 
         let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
-            let major = major_version::get(matches);
-            Some(EntityVersionKey::new(major, entity_version))
+            match major_version::get(matches) {
+                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
+                None => return Err(CliError::MissingMajorVersion),
+            }
         } else {
             None
         };
