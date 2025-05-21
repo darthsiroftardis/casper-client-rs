@@ -7,15 +7,7 @@ use crate::{
 use alloc::collections::BTreeMap;
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
-use casper_types::{
-    bytesrepr::{Bytes, ToBytes},
-    system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr, PackageHash,
-    PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, TransactionArgs,
-    TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
-    TransactionScheduling, TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget,
-    URef, U512,
-};
+use casper_types::{bytesrepr::{Bytes, ToBytes}, system::auction::{DelegatorKind, Reservation}, AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr, PackageHash, PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams, TransactionScheduling, TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget, URef, U512, EntityVersionKey};
 use core::marker::PhantomData;
 pub use error::TransactionV1BuilderError;
 
@@ -364,6 +356,18 @@ impl<'a> TransactionV1Builder<'a> {
     }
 
     /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a
+    /// package.
+    pub fn new_targeting_package_with_version_key<E: Into<String>>(
+        hash: PackageHash,
+        version: Option<EntityVersionKey>,
+        entry_point: E,
+        runtime: TransactionRuntimeParams,
+    ) -> Self {
+        let id = TransactionInvocationTarget::new_package_with_key(hash, version);
+        Self::new_targeting_stored(id, entry_point, runtime)
+    }
+
+    /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a
     /// package via its alias.
     pub fn new_targeting_package_via_alias<A: Into<String>, E: Into<String>>(
         alias: A,
@@ -373,6 +377,18 @@ impl<'a> TransactionV1Builder<'a> {
     ) -> Self {
         #[allow(deprecated)]
         let id = TransactionInvocationTarget::new_package_alias(alias.into(), version);
+        Self::new_targeting_stored(id, entry_point, runtime)
+    }
+
+    /// Returns a new `TransactionV1Builder` suitable for building a transaction targeting a
+    /// package via its alias.
+    pub fn new_targeting_package_via_alias_with_version_key<A: Into<String>, E: Into<String>>(
+        alias: A,
+        version: Option<EntityVersionKey>,
+        entry_point: E,
+        runtime: TransactionRuntimeParams,
+    ) -> Self {
+        let id = TransactionInvocationTarget::new_package_alias_with_key(alias.into(), version);
         Self::new_targeting_stored(id, entry_point, runtime)
     }
 

@@ -63,6 +63,7 @@ pub(super) enum DisplayOrder {
     EntityAddr,
     ContractHash,
     MinBidOverride,
+    MajorVersion,
     RpcId,
     Verbose,
 }
@@ -1201,6 +1202,33 @@ pub(super) mod session_version {
         *get_result
     }
 }
+
+pub(super) mod major_version {
+    use super::*;
+
+    pub const ARG_NAME: &str = "major-version";
+    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
+    const ARG_HELP: &str = "The major version of the called session contract. Required if specifying a version";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .required(false)
+            .display_order(DisplayOrder::MajorVersion as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> u32 {
+        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper).unwrap_or_default()
+    }
+
+    fn get_deref_helper(get_result: &u32) -> u32 {
+        *get_result
+    }
+}
+
+
 mod package_name_arg {
     use super::*;
 
@@ -2212,6 +2240,7 @@ pub(super) mod invocable_entity_alias {
 }
 
 pub(super) mod package {
+    use casper_types::EntityVersionKey;
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
 
@@ -2252,10 +2281,17 @@ pub(super) mod package {
         let maybe_entity_version = session_version::get(matches);
         let runtime = get_transaction_runtime(matches)?;
 
+        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
+            let major = major_version::get(matches);
+            Some(EntityVersionKey::new(major, entity_version))
+        } else {
+            None
+        };
+
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let params = TransactionBuilderParams::Package {
+        let params = TransactionBuilderParams::PackageWithVersionKey {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
-            maybe_entity_version,
+            maybe_entity_version_key,
             entry_point,
             runtime,
         };
@@ -2268,11 +2304,13 @@ pub(super) mod package {
             .arg(package_addr::arg().required_unless_present(contract_package_hash::ARG_NAME))
             .arg(contract_package_hash::arg())
             .arg(session_version::arg())
+            .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
 }
 
 pub(super) mod package_alias {
+    use casper_types::EntityVersionKey;
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
 
@@ -2305,12 +2343,19 @@ pub(super) mod package_alias {
 
         let maybe_entity_version = session_version::get(matches);
 
+        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
+            let major = major_version::get(matches);
+            Some(EntityVersionKey::new(major, entity_version))
+        } else {
+            None
+        };
+
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let runtime = get_transaction_runtime(matches)?;
 
-        let params = TransactionBuilderParams::PackageAlias {
+        let params = TransactionBuilderParams::PackageAliasWithVersionKey {
             package_alias,
-            maybe_entity_version,
+            maybe_entity_version_key,
             entry_point,
             runtime,
         };
@@ -2322,6 +2367,7 @@ pub(super) mod package_alias {
         package_alias_subcommand
             .arg(package_name_arg::arg())
             .arg(session_version::arg())
+            .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
 }

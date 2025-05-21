@@ -1,9 +1,4 @@
-use casper_types::{
-    bytesrepr::Bytes,
-    system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, PackageHash, PublicKey, TransactionRuntimeParams, TransferTarget, URef,
-    U512,
-};
+use casper_types::{bytesrepr::Bytes, system::auction::{DelegatorKind, Reservation}, AddressableEntityHash, PackageHash, PublicKey, TransactionRuntimeParams, TransferTarget, URef, U512, EntityVersionKey};
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
@@ -102,12 +97,34 @@ pub enum TransactionBuilderParams<'a> {
         /// Transaction Runtime.
         runtime: TransactionRuntimeParams,
     },
+    /// Parameters for the package variant of the transaction builder
+    PackageWithVersionKey {
+        /// The package hash for the package transaction
+        package_hash: PackageHash,
+        /// The optional entity version for the package transaction
+        maybe_entity_version_key: Option<EntityVersionKey>,
+        /// The entry_point for the package transaction
+        entry_point: &'a str,
+        /// Transaction Runtime.
+        runtime: TransactionRuntimeParams,
+    },
     /// Parameters for the package alias variant of the transaction builder
     PackageAlias {
         /// The package alias for the package alias transaction
         package_alias: &'a str,
         /// The optional entity version for the package alias transaction
         maybe_entity_version: Option<u32>,
+        /// The entry point for the package alias transaction
+        entry_point: &'a str,
+        /// Transaction Runtime params.
+        runtime: TransactionRuntimeParams,
+    },
+    /// Parameters for the package alias variant of the transaction builder
+    PackageAliasWithVersionKey {
+        /// The package alias for the package alias transaction
+        package_alias: &'a str,
+        /// The optional entity version for the package alias transaction
+        maybe_entity_version_key: Option<EntityVersionKey>,
         /// The entry point for the package alias transaction
         entry_point: &'a str,
         /// Transaction Runtime params.
