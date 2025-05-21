@@ -1208,7 +1208,8 @@ pub(super) mod major_version {
 
     pub const ARG_NAME: &str = "major-version";
     const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
-    const ARG_HELP: &str = "The major version of the called session contract. Required if specifying a version";
+    const ARG_HELP: &str =
+        "The major version of the called session contract. Required if specifying a version";
 
     pub fn arg() -> Arg {
         Arg::new(ARG_NAME)
@@ -1220,14 +1221,16 @@ pub(super) mod major_version {
     }
 
     pub fn get(matches: &ArgMatches) -> u32 {
-        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper).unwrap_or_default()
+        matches
+            .get_one::<u32>(ARG_NAME)
+            .map(get_deref_helper)
+            .unwrap_or_default()
     }
 
     fn get_deref_helper(get_result: &u32) -> u32 {
         *get_result
     }
 }
-
 
 mod package_name_arg {
     use super::*;
@@ -2240,9 +2243,9 @@ pub(super) mod invocable_entity_alias {
 }
 
 pub(super) mod package {
-    use casper_types::EntityVersionKey;
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
+    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package";
 
@@ -2310,9 +2313,9 @@ pub(super) mod package {
 }
 
 pub(super) mod package_alias {
-    use casper_types::EntityVersionKey;
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
+    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package-name";
 
