@@ -2,6 +2,7 @@
 //! creating transactions.
 
 use std::process;
+use std::str::FromStr;
 
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
@@ -64,6 +65,7 @@ pub(super) enum DisplayOrder {
     ContractHash,
     MinBidOverride,
     MajorVersion,
+    TransactionRuntime,
     RpcId,
     Verbose,
 }
@@ -600,7 +602,7 @@ pub(super) mod transaction_runtime {
             .value_name(ARG_VALUE_NAME)
             .default_value(ARG_DEFAULT)
             .help(ARG_HELP)
-            .display_order(DisplayOrder::PricingMode as usize)
+            .display_order(DisplayOrder::TransactionRuntime as usize)
             .value_parser(value_parser!(TransactionRuntime))
     }
 
@@ -1178,6 +1180,17 @@ pub(super) mod session_entry_point {
     }
 }
 
+fn parse_arg_to_int<T: FromStr<Err = std::num::ParseIntError>>(value: &str, context: &'static str) -> Result<T, CliError>
+{
+    value
+        .parse()
+        .map_err(move |err| CliError::FailedToParseInt {
+            context,
+            error: err,
+        })
+}
+
+
 pub(super) mod session_version {
     use super::*;
 
@@ -1195,7 +1208,10 @@ pub(super) mod session_version {
     }
 
     pub fn get(matches: &ArgMatches) -> Option<u32> {
-        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper)
+        match matches.get_one::<String>(ARG_NAME) {
+            Some(arg) => parse_arg_to_int(arg, "session-version").ok(),
+            None => None,
+        }
     }
 
     fn get_deref_helper(get_result: &u32) -> u32 {
@@ -1221,7 +1237,10 @@ pub(super) mod major_version {
     }
 
     pub fn get(matches: &ArgMatches) -> Option<u32> {
-        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper)
+        match matches.get_one::<String>(ARG_NAME) {
+            Some(arg) => parse_arg_to_int(arg, "major-version").ok(),
+            None => None,
+        }
     }
 
     fn get_deref_helper(get_result: &u32) -> u32 {
@@ -2306,6 +2325,9 @@ pub(super) mod package {
             .arg(package_addr::arg().required_unless_present(contract_package_hash::ARG_NAME))
             .arg(contract_package_hash::arg())
             .arg(session_version::arg())
+            .arg(transaction_runtime::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
@@ -2371,6 +2393,9 @@ pub(super) mod package_alias {
         package_alias_subcommand
             .arg(package_name_arg::arg())
             .arg(session_version::arg())
+            .arg(transaction_runtime::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
