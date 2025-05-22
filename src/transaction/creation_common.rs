@@ -1180,8 +1180,10 @@ pub(super) mod session_entry_point {
     }
 }
 
-fn parse_arg_to_int<T: FromStr<Err = std::num::ParseIntError>>(value: &str, context: &'static str) -> Result<T, CliError>
-{
+fn parse_arg_to_int<T: FromStr<Err = std::num::ParseIntError>>(
+    value: &str,
+    context: &'static str,
+) -> Result<T, CliError> {
     value
         .parse()
         .map_err(move |err| CliError::FailedToParseInt {
@@ -1189,7 +1191,6 @@ fn parse_arg_to_int<T: FromStr<Err = std::num::ParseIntError>>(value: &str, cont
             error: err,
         })
 }
-
 
 pub(super) mod session_version {
     use super::*;
