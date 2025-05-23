@@ -2,12 +2,11 @@
 //! creating transactions.
 
 use std::process;
+use std::str::FromStr;
 
 use clap::{Arg, ArgAction, ArgGroup, ArgMatches, Command};
 
-use casper_client::cli::{
-    json_args_help, simple_args_help, CliError, TransactionBuilderParams, TransactionStrParams,
-};
+use casper_client::cli::{json_args_help, simple_args_help, CliError, TransactionStrParams};
 use casper_types::TransactionRuntimeParams;
 use transaction_runtime::TransactionRuntime;
 
@@ -64,6 +63,9 @@ pub(super) enum DisplayOrder {
     Delegator,
     EntityAddr,
     ContractHash,
+    MinBidOverride,
+    MajorVersion,
+    TransactionRuntime,
     RpcId,
     Verbose,
 }
@@ -600,7 +602,7 @@ pub(super) mod transaction_runtime {
             .value_name(ARG_VALUE_NAME)
             .default_value(ARG_DEFAULT)
             .help(ARG_HELP)
-            .display_order(DisplayOrder::PricingMode as usize)
+            .display_order(DisplayOrder::TransactionRuntime as usize)
             .value_parser(value_parser!(TransactionRuntime))
     }
 
@@ -926,7 +928,7 @@ pub(super) mod public_key {
         common::public_key::try_read_from_file(value)
     }
 
-    pub(super) fn parse_public_key(value: &str) -> Result<PublicKey, CliError> {
+    pub(crate) fn parse_public_key(value: &str) -> Result<PublicKey, CliError> {
         let public_key =
             PublicKey::from_hex(value).map_err(|error| casper_client::Error::CryptoError {
                 context: "session account",
@@ -973,6 +975,27 @@ pub(super) mod new_public_key {
                 error: crypto::ErrorExt::from(error),
             })?;
         Ok(public_key)
+    }
+}
+
+pub(super) mod min_bid_override {
+    use super::*;
+
+    const ARG_NAME: &str = "min-bid-override";
+
+    const ARG_HELP: &str = "Flag to override the min bid staking amount check";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .action(ArgAction::SetTrue)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::MinBidOverride as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> bool {
+        matches.get_flag(ARG_NAME)
     }
 }
 
@@ -1157,6 +1180,18 @@ pub(super) mod session_entry_point {
     }
 }
 
+fn parse_arg_to_int<T: FromStr<Err = std::num::ParseIntError>>(
+    value: &str,
+    context: &'static str,
+) -> Result<T, CliError> {
+    value
+        .parse()
+        .map_err(move |err| CliError::FailedToParseInt {
+            context,
+            error: err,
+        })
+}
+
 pub(super) mod session_version {
     use super::*;
 
@@ -1174,13 +1209,46 @@ pub(super) mod session_version {
     }
 
     pub fn get(matches: &ArgMatches) -> Option<u32> {
-        matches.get_one::<u32>(ARG_NAME).map(get_deref_helper)
+        match matches.get_one::<String>(ARG_NAME) {
+            Some(arg) => parse_arg_to_int(arg, "session-version").ok(),
+            None => None,
+        }
     }
 
     fn get_deref_helper(get_result: &u32) -> u32 {
         *get_result
     }
 }
+
+pub(super) mod major_version {
+    use super::*;
+
+    pub const ARG_NAME: &str = "major-version";
+    const ARG_VALUE_NAME: &str = common::ARG_INTEGER;
+    const ARG_HELP: &str =
+        "The major version of the called session contract. Required if specifying a version";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .value_name(ARG_VALUE_NAME)
+            .help(ARG_HELP)
+            .required(false)
+            .display_order(DisplayOrder::MajorVersion as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> Option<u32> {
+        match matches.get_one::<String>(ARG_NAME) {
+            Some(arg) => parse_arg_to_int(arg, "major-version").ok(),
+            None => None,
+        }
+    }
+
+    fn get_deref_helper(get_result: &u32) -> u32 {
+        *get_result
+    }
+}
+
 mod package_name_arg {
     use super::*;
 
@@ -1689,6 +1757,53 @@ pub(super) mod activate_bid {
     }
 }
 
+pub(super) mod withdraw_bid_all {
+    use super::*;
+    use crate::cli::TransactionBuilderParams;
+    use casper_client::cli::CliError;
+    use casper_types::U512;
+
+    pub const NAME: &str = "withdraw-bid-all";
+
+    const ACCEPT_SESSION_ARGS: bool = false;
+
+    const ABOUT: &str =
+        "Creates a new withdraw-bid transaction which completely unbonds the validator";
+    pub fn build() -> Command {
+        apply_common_creation_options(
+            add_args(Command::new(NAME).about(ABOUT)),
+            false,
+            false,
+            ACCEPT_SESSION_ARGS,
+        )
+    }
+
+    pub fn put_transaction_build() -> Command {
+        add_rpc_args(build())
+    }
+
+    pub fn run(
+        matches: &ArgMatches,
+        amount: U512,
+    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError> {
+        let public_key_str = public_key::get(matches)?;
+        let public_key = public_key::parse_public_key(&public_key_str)?;
+
+        let params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override: true,
+        };
+        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+
+        Ok((params, transaction_str_params))
+    }
+
+    fn add_args(withdraw_bid_subcommand: Command) -> Command {
+        withdraw_bid_subcommand.arg(public_key::arg(DisplayOrder::PublicKey as usize))
+    }
+}
+
 pub(super) mod withdraw_bid {
     use super::*;
     use crate::cli::TransactionBuilderParams;
@@ -1721,7 +1836,13 @@ pub(super) mod withdraw_bid {
         let amount_str = transaction_amount::get(matches);
         let amount = transaction_amount::parse_transaction_amount(amount_str)?;
 
-        let params = TransactionBuilderParams::WithdrawBid { public_key, amount };
+        let min_bid_override = min_bid_override::get(matches);
+
+        let params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override,
+        };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
         Ok((params, transaction_str_params))
@@ -1730,6 +1851,7 @@ pub(super) mod withdraw_bid {
     fn add_args(withdraw_bid_subcommand: Command) -> Command {
         withdraw_bid_subcommand
             .arg(public_key::arg(DisplayOrder::PublicKey as usize))
+            .arg(min_bid_override::arg())
             .arg(transaction_amount::arg())
     }
 }
@@ -2140,6 +2262,7 @@ pub(super) mod invocable_entity_alias {
 pub(super) mod package {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
+    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package";
 
@@ -2178,10 +2301,19 @@ pub(super) mod package {
         let maybe_entity_version = session_version::get(matches);
         let runtime = get_transaction_runtime(matches)?;
 
+        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
+            match major_version::get(matches) {
+                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
+                None => return Err(CliError::MissingMajorVersion),
+            }
+        } else {
+            None
+        };
+
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let params = TransactionBuilderParams::Package {
+        let params = TransactionBuilderParams::PackageWithVersionKey {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
-            maybe_entity_version,
+            maybe_entity_version_key,
             entry_point,
             runtime,
         };
@@ -2194,6 +2326,10 @@ pub(super) mod package {
             .arg(package_addr::arg().required_unless_present(contract_package_hash::ARG_NAME))
             .arg(contract_package_hash::arg())
             .arg(session_version::arg())
+            .arg(transaction_runtime::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
+            .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
 }
@@ -2201,6 +2337,7 @@ pub(super) mod package {
 pub(super) mod package_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
+    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package-name";
 
@@ -2231,12 +2368,21 @@ pub(super) mod package_alias {
 
         let maybe_entity_version = session_version::get(matches);
 
+        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
+            match major_version::get(matches) {
+                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
+                None => return Err(CliError::MissingMajorVersion),
+            }
+        } else {
+            None
+        };
+
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let runtime = get_transaction_runtime(matches)?;
 
-        let params = TransactionBuilderParams::PackageAlias {
+        let params = TransactionBuilderParams::PackageAliasWithVersionKey {
             package_alias,
-            maybe_entity_version,
+            maybe_entity_version_key,
             entry_point,
             runtime,
         };
@@ -2248,6 +2394,10 @@ pub(super) mod package_alias {
         package_alias_subcommand
             .arg(package_name_arg::arg())
             .arg(session_version::arg())
+            .arg(transaction_runtime::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
+            .arg(major_version::arg())
             .arg(session_entry_point::arg())
     }
 }
@@ -2551,35 +2701,6 @@ pub(super) fn add_rpc_args(subcommand: Command) -> Command {
             DisplayOrder::NodeAddress as usize,
         ))
         .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
-}
-
-pub(super) fn parse_rpc_args_and_run(
-    matches: &ArgMatches,
-    subcommand_run: fn(
-        &ArgMatches,
-    ) -> Result<(TransactionBuilderParams, TransactionStrParams), CliError>,
-) -> Result<
-    (
-        TransactionBuilderParams,
-        TransactionStrParams,
-        &str,
-        &str,
-        u64,
-    ),
-    CliError,
-> {
-    let node_address = common::node_address::get(matches);
-    let rpc_id = common::rpc_id::get(matches);
-    let verbosity_level = common::verbose::get(matches);
-
-    let (transaction_builder_params, transaction_str_params) = subcommand_run(matches)?;
-    Ok((
-        transaction_builder_params,
-        transaction_str_params,
-        node_address,
-        rpc_id,
-        verbosity_level,
-    ))
 }
 
 fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimeParams, CliError> {

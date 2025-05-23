@@ -307,6 +307,20 @@ pub fn make_transaction_builder(
             );
             Ok(transaction_builder)
         }
+        TransactionBuilderParams::PackageWithVersionKey {
+            package_hash,
+            maybe_entity_version_key,
+            entry_point,
+            runtime,
+        } => {
+            let transaction_builder = TransactionV1Builder::new_targeting_package_with_version_key(
+                package_hash,
+                maybe_entity_version_key,
+                entry_point,
+                runtime,
+            );
+            Ok(transaction_builder)
+        }
         TransactionBuilderParams::PackageAlias {
             package_alias,
             maybe_entity_version,
@@ -317,6 +331,22 @@ pub fn make_transaction_builder(
                 TransactionV1Builder::new_targeting_package_via_alias(
                     package_alias,
                     maybe_entity_version,
+                    entry_point,
+                    runtime,
+                );
+            let transaction_builder = new_targeting_package_via_alias;
+            Ok(transaction_builder)
+        }
+        TransactionBuilderParams::PackageAliasWithVersionKey {
+            package_alias,
+            maybe_entity_version_key,
+            entry_point,
+            runtime,
+        } => {
+            let new_targeting_package_via_alias =
+                TransactionV1Builder::new_targeting_package_via_alias_with_version_key(
+                    package_alias,
+                    maybe_entity_version_key,
                     entry_point,
                     runtime,
                 );
@@ -343,7 +373,9 @@ pub fn make_transaction_builder(
 
             Ok(transaction_builder)
         }
-        TransactionBuilderParams::WithdrawBid { public_key, amount } => {
+        TransactionBuilderParams::WithdrawBid {
+            public_key, amount, ..
+        } => {
             let transaction_builder = TransactionV1Builder::new_withdraw_bid(public_key, amount)?;
             Ok(transaction_builder)
         }

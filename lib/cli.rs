@@ -92,7 +92,7 @@ pub use transaction::{
 };
 pub use transaction_builder_params::TransactionBuilderParams;
 pub use transaction_str_params::TransactionStrParams;
-pub(crate) use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
+pub use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
 
 /// Retrieves a [`casper_types::Deploy`] from the network.
 ///

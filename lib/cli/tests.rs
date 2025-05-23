@@ -489,9 +489,7 @@ mod transaction {
                     ]
                   },
                   "entry_point": "AddBid",
-                  "scheduling": {
-                    "FutureEra": 195120
-                  },
+                  "scheduling": "Standard",
                   "target": "Native"
                 }
             },
@@ -758,8 +756,11 @@ mod transaction {
         };
         let transaction_string_params = transaction_str_params;
 
-        let transaction_builder_params =
-            TransactionBuilderParams::WithdrawBid { public_key, amount };
+        let transaction_builder_params = TransactionBuilderParams::WithdrawBid {
+            public_key,
+            amount,
+            min_bid_override: true,
+        };
 
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -1270,12 +1271,13 @@ mod transaction {
     fn should_create_package_transaction() {
         let package_addr: PackageAddr = vec![0u8; 32].as_slice().try_into().unwrap();
         let entry_point = "test-entry-point-package";
-        let maybe_entity_version = Some(23);
+        let maybe_entity_version = None;
         let params = TransactionRuntimeParams::VmCasperV1;
         let target = &TransactionTarget::Stored {
             id: TransactionInvocationTarget::ByPackageHash {
                 addr: package_addr,
                 version: maybe_entity_version,
+                version_key: None,
             },
             runtime: params,
         };
@@ -1334,6 +1336,7 @@ mod transaction {
             id: TransactionInvocationTarget::ByPackageName {
                 name: package_name.clone(),
                 version: maybe_entity_version,
+                version_key: None,
             },
             runtime: params,
         };
