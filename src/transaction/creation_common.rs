@@ -1214,10 +1214,6 @@ pub(super) mod session_version {
             None => None,
         }
     }
-
-    fn get_deref_helper(get_result: &u32) -> u32 {
-        *get_result
-    }
 }
 
 pub(super) mod major_version {
@@ -1242,10 +1238,6 @@ pub(super) mod major_version {
             Some(arg) => parse_arg_to_int(arg, "major-version").ok(),
             None => None,
         }
-    }
-
-    fn get_deref_helper(get_result: &u32) -> u32 {
-        *get_result
     }
 }
 

@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.  The format
 
 
 
-## Unreleased
+## 4.0.0
 
 ### Added
 * Add module to support node 2.0.0 RPCs.
