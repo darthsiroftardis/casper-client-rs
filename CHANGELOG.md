@@ -10,8 +10,17 @@ All notable changes to this project will be documented in this file.  The format
 [comment]: <> (Security:   in case of vulnerabilities)
 
 
+## 3.1.0
 
-## 4.0.0
+### Added
+* Add `withdraw-bid-all` subcommand allowing validators to completely unbond their stake without specifying their stake.
+
+### Changed
+* Updated `withdraw-bid` to return a warning if a validators withdraw will drop their stake to below the minimum validator bid.
+
+
+
+## 3.0.1
 
 ### Added
 * Add module to support node 2.0.0 RPCs.
