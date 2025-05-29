@@ -72,10 +72,10 @@ Package for Casper Client to connect to Casper Node.
 For information on using package, see https://github.com/casper-network/casper-node
 """
 
-[package.metadata.deb.variants.bionic]
+[package.metadata.deb.variants.jammy]
 name = "casper-client"
-revision = "0+bionic"
+revision = "0+jammy"
 
-[package.metadata.deb.variants.focal]
+[package.metadata.deb.variants.noble]
 name = "casper-client"
-revision = "0+focal"
+revision = "0+noble"
