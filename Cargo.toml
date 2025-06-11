@@ -35,8 +35,8 @@ base16 = "0.2.1"
 base64 = { version = "0.22.1", default-features = false }
 bytes = { version = "1.6.0", default-features = false }
 casper-types = { version = "6.0.0", features = ["std", "json-schema"] }
-clap = { version = "~4.4", features = ["cargo", "deprecated"], optional = true }
-clap_complete = { version = "~4.4", default-features = false, optional = true }
+clap = { version = "~4.5", features = ["cargo", "deprecated"], optional = true }
+clap_complete = { version = "~4.5", default-features = false, optional = true }
 flate2 = "1.0.30"
 hex-buffer-serde = "0.4.0"
 humantime = "2.1.0"
