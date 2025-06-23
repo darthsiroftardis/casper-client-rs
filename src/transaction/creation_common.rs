@@ -2254,7 +2254,6 @@ pub(super) mod invocable_entity_alias {
 pub(super) mod package {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
-    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package";
 
@@ -2291,23 +2290,18 @@ pub(super) mod package {
             }
         };
         let maybe_entity_version = session_version::get(matches);
+        let major_protocol_version = major_version::get(matches);
         let runtime = get_transaction_runtime(matches)?;
 
-        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
-            match major_version::get(matches) {
-                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
-                None => return Err(CliError::MissingMajorVersion),
-            }
-        } else {
-            None
-        };
+
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let params = TransactionBuilderParams::PackageWithVersionKey {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
-            maybe_entity_version_key,
+            maybe_entity_version,
             entry_point,
             runtime,
+            major_protocol_version
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -2329,7 +2323,6 @@ pub(super) mod package {
 pub(super) mod package_alias {
     use super::*;
     use casper_client::cli::{CliError, TransactionBuilderParams};
-    use casper_types::EntityVersionKey;
 
     pub const NAME: &str = "package-name";
 
@@ -2359,24 +2352,17 @@ pub(super) mod package_alias {
         let package_alias = package_name_arg::get(matches);
 
         let maybe_entity_version = session_version::get(matches);
-
-        let maybe_entity_version_key = if let Some(entity_version) = maybe_entity_version {
-            match major_version::get(matches) {
-                Some(major) => Some(EntityVersionKey::new(major, entity_version)),
-                None => return Err(CliError::MissingMajorVersion),
-            }
-        } else {
-            None
-        };
+        let major_protocol_version = major_version::get(matches);
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let runtime = get_transaction_runtime(matches)?;
 
         let params = TransactionBuilderParams::PackageAliasWithVersionKey {
             package_alias,
-            maybe_entity_version_key,
+            maybe_entity_version,
             entry_point,
             runtime,
+            major_protocol_version
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))

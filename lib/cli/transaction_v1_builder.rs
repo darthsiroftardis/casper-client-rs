@@ -10,13 +10,14 @@ use alloc::vec::Vec;
 use casper_types::{
     bytesrepr::{Bytes, ToBytes},
     system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, CLValueError, Digest, EntityVersion, EntityVersionKey, InitiatorAddr,
+    AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr,
     PackageHash, PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp,
     TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
     TransactionScheduling, TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget,
     URef, U512,
 };
 use core::marker::PhantomData;
+use casper_types::contracts::ProtocolVersionMajor;
 pub use error::TransactionV1BuilderError;
 
 /// A builder for constructing `TransactionV1` instances with various configuration options.
@@ -367,11 +368,12 @@ impl<'a> TransactionV1Builder<'a> {
     /// package.
     pub fn new_targeting_package_with_version_key<E: Into<String>>(
         hash: PackageHash,
-        version: Option<EntityVersionKey>,
+        version: Option<EntityVersion>,
+        protocol_version_major: Option<ProtocolVersionMajor>,
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
-        let id = TransactionInvocationTarget::new_package_with_key(hash, version);
+        let id = TransactionInvocationTarget::new_package_with_major(hash, version, protocol_version_major);
         Self::new_targeting_stored(id, entry_point, runtime)
     }
 
@@ -392,11 +394,12 @@ impl<'a> TransactionV1Builder<'a> {
     /// package via its alias.
     pub fn new_targeting_package_via_alias_with_version_key<A: Into<String>, E: Into<String>>(
         alias: A,
-        version: Option<EntityVersionKey>,
+        version: Option<EntityVersion>,
+        protocol_version_major: Option<ProtocolVersionMajor>,
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
-        let id = TransactionInvocationTarget::new_package_alias_with_key(alias.into(), version);
+        let id = TransactionInvocationTarget::new_package_alias_with_major(alias.into(), version, protocol_version_major);
         Self::new_targeting_stored(id, entry_point, runtime)
     }
 

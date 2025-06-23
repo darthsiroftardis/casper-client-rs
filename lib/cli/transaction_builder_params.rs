@@ -1,9 +1,5 @@
-use casper_types::{
-    bytesrepr::Bytes,
-    system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, EntityVersionKey, PackageHash, PublicKey, TransactionRuntimeParams,
-    TransferTarget, URef, U512,
-};
+use casper_types::{bytesrepr::Bytes, system::auction::{DelegatorKind, Reservation}, AddressableEntityHash, PackageHash, PublicKey, TransactionRuntimeParams, TransferTarget, URef, U512, EntityVersion};
+use casper_types::contracts::ProtocolVersionMajor;
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
@@ -106,12 +102,14 @@ pub enum TransactionBuilderParams<'a> {
     PackageWithVersionKey {
         /// The package hash for the package transaction
         package_hash: PackageHash,
-        /// The optional entity version for the package transaction
-        maybe_entity_version_key: Option<EntityVersionKey>,
-        /// The entry_point for the package transaction
+        /// The optional entity version for the package alias transaction
+        maybe_entity_version: Option<EntityVersion>,
+        /// The entry point for the package alias transaction
         entry_point: &'a str,
-        /// Transaction Runtime.
+        /// Transaction Runtime params.
         runtime: TransactionRuntimeParams,
+        /// The protocol version major.
+        major_protocol_version: Option<ProtocolVersionMajor>,
     },
     /// Parameters for the package alias variant of the transaction builder
     PackageAlias {
@@ -129,11 +127,13 @@ pub enum TransactionBuilderParams<'a> {
         /// The package alias for the package alias transaction
         package_alias: &'a str,
         /// The optional entity version for the package alias transaction
-        maybe_entity_version_key: Option<EntityVersionKey>,
+        maybe_entity_version: Option<EntityVersion>,
         /// The entry point for the package alias transaction
         entry_point: &'a str,
         /// Transaction Runtime params.
         runtime: TransactionRuntimeParams,
+        /// The protocol version major.
+        major_protocol_version: Option<ProtocolVersionMajor>,
     },
     /// Parameters for the session variant of the transaction builder
     Session {
