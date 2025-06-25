@@ -1277,7 +1277,7 @@ mod transaction {
             id: TransactionInvocationTarget::ByPackageHash {
                 addr: package_addr,
                 version: maybe_entity_version,
-                version_key: None,
+                protocol_version_major: None,
             },
             runtime: params,
         };
@@ -1336,7 +1336,7 @@ mod transaction {
             id: TransactionInvocationTarget::ByPackageName {
                 name: package_name.clone(),
                 version: maybe_entity_version,
-                version_key: None,
+                protocol_version_major: None,
             },
             runtime: params,
         };
