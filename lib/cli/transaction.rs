@@ -344,7 +344,7 @@ pub fn make_transaction_builder(
             maybe_entity_version,
             entry_point,
             runtime,
-            major_protocol_version
+            major_protocol_version,
         } => {
             let new_targeting_package_via_alias =
                 TransactionV1Builder::new_targeting_package_via_alias_with_version_key(

@@ -2293,15 +2293,13 @@ pub(super) mod package {
         let major_protocol_version = major_version::get(matches);
         let runtime = get_transaction_runtime(matches)?;
 
-
-
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let params = TransactionBuilderParams::PackageWithVersionKey {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
             maybe_entity_version,
             entry_point,
             runtime,
-            major_protocol_version
+            major_protocol_version,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))
@@ -2362,7 +2360,7 @@ pub(super) mod package_alias {
             maybe_entity_version,
             entry_point,
             runtime,
-            major_protocol_version
+            major_protocol_version,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         Ok((params, transaction_str_params))

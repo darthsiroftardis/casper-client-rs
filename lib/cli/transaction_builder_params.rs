@@ -1,5 +1,10 @@
-use casper_types::{bytesrepr::Bytes, system::auction::{DelegatorKind, Reservation}, AddressableEntityHash, PackageHash, PublicKey, TransactionRuntimeParams, TransferTarget, URef, U512, EntityVersion};
 use casper_types::contracts::ProtocolVersionMajor;
+use casper_types::{
+    bytesrepr::Bytes,
+    system::auction::{DelegatorKind, Reservation},
+    AddressableEntityHash, EntityVersion, PackageHash, PublicKey, TransactionRuntimeParams,
+    TransferTarget, URef, U512,
+};
 
 /// An enum representing the parameters needed to construct a transaction builder
 /// for the commands concerning the creation of a transaction
