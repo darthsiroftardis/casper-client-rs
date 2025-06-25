@@ -55,10 +55,10 @@ pub use error::TransactionV1BuilderError;
 ///
 /// ## Signing Fields
 /// - `secret_key`: The secret key used to sign the transaction. This field is conditional based on
-/// the compilation environment:
-///     - In normal mode, it holds a reference to the secret key (`Option<&'a SecretKey>`).
-///     - In testing mode or with the `std` feature enabled, it holds an owned secret key
-///  (`Option<SecretKey>`).
+///   the compilation environment:
+/// - In normal mode, it holds a reference to the secret key (`Option<&'a SecretKey>`).
+/// - In testing mode or with the `std` feature enabled, it holds an owned secret key
+///   (`Option<SecretKey>`).
 ///
 /// ## Phantom Data
 /// - `_phantom_data`: Ensures the correct lifetime `'a` is respected for the builder, helping with

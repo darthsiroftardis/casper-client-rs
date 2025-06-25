@@ -402,7 +402,6 @@ pub async fn get_balance(
 ///
 /// # Returns
 /// The result containing either a successful response with the account details or a `CliError`.
-
 pub async fn get_account(
     maybe_rpc_id: &str,
     node_address: &str,
