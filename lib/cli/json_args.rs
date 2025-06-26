@@ -207,11 +207,11 @@ fn write_json_to_bytesrepr(
                 return Err(ErrorDetails::ResultObjectHasInvalidNumberOfFields);
             }
             match map.iter().next() {
-                Some((key, value)) if key.to_ascii_lowercase() == "ok" => {
+                Some((key, value)) if key.eq_ignore_ascii_case("ok") => {
                     output.push(RESULT_OK_TAG);
                     write_json_to_bytesrepr(ok, value, output)?;
                 }
-                Some((key, value)) if key.to_ascii_lowercase() == "err" => {
+                Some((key, value)) if key.eq_ignore_ascii_case("err") => {
                     output.push(RESULT_ERR_TAG);
                     write_json_to_bytesrepr(err, value, output)?;
                 }

@@ -309,13 +309,15 @@ pub fn make_transaction_builder(
         }
         TransactionBuilderParams::PackageWithVersionKey {
             package_hash,
-            maybe_entity_version_key,
+            maybe_entity_version,
             entry_point,
             runtime,
+            major_protocol_version,
         } => {
             let transaction_builder = TransactionV1Builder::new_targeting_package_with_version_key(
                 package_hash,
-                maybe_entity_version_key,
+                maybe_entity_version,
+                major_protocol_version,
                 entry_point,
                 runtime,
             );
@@ -339,14 +341,16 @@ pub fn make_transaction_builder(
         }
         TransactionBuilderParams::PackageAliasWithVersionKey {
             package_alias,
-            maybe_entity_version_key,
+            maybe_entity_version,
             entry_point,
             runtime,
+            major_protocol_version,
         } => {
             let new_targeting_package_via_alias =
                 TransactionV1Builder::new_targeting_package_via_alias_with_version_key(
                     package_alias,
-                    maybe_entity_version_key,
+                    maybe_entity_version,
+                    major_protocol_version,
                     entry_point,
                     runtime,
                 );

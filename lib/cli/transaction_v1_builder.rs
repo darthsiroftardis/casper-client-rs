@@ -7,12 +7,13 @@ use crate::{
 use alloc::collections::BTreeMap;
 use alloc::collections::BTreeSet;
 use alloc::vec::Vec;
+use casper_types::contracts::ProtocolVersionMajor;
 use casper_types::{
     bytesrepr::{Bytes, ToBytes},
     system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, CLValueError, Digest, EntityVersion, EntityVersionKey, InitiatorAddr,
-    PackageHash, PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp,
-    TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
+    AddressableEntityHash, CLValueError, Digest, EntityVersion, InitiatorAddr, PackageHash,
+    PricingMode, PublicKey, RuntimeArgs, SecretKey, TimeDiff, Timestamp, TransactionArgs,
+    TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
     TransactionScheduling, TransactionTarget, TransactionV1, TransactionV1Payload, TransferTarget,
     URef, U512,
 };
@@ -54,10 +55,10 @@ pub use error::TransactionV1BuilderError;
 ///
 /// ## Signing Fields
 /// - `secret_key`: The secret key used to sign the transaction. This field is conditional based on
-/// the compilation environment:
-///     - In normal mode, it holds a reference to the secret key (`Option<&'a SecretKey>`).
-///     - In testing mode or with the `std` feature enabled, it holds an owned secret key
-///  (`Option<SecretKey>`).
+///   the compilation environment:
+/// - In normal mode, it holds a reference to the secret key (`Option<&'a SecretKey>`).
+/// - In testing mode or with the `std` feature enabled, it holds an owned secret key
+///   (`Option<SecretKey>`).
 ///
 /// ## Phantom Data
 /// - `_phantom_data`: Ensures the correct lifetime `'a` is respected for the builder, helping with
@@ -367,11 +368,16 @@ impl<'a> TransactionV1Builder<'a> {
     /// package.
     pub fn new_targeting_package_with_version_key<E: Into<String>>(
         hash: PackageHash,
-        version: Option<EntityVersionKey>,
+        version: Option<EntityVersion>,
+        protocol_version_major: Option<ProtocolVersionMajor>,
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
-        let id = TransactionInvocationTarget::new_package_with_key(hash, version);
+        let id = TransactionInvocationTarget::new_package_with_major(
+            hash,
+            version,
+            protocol_version_major,
+        );
         Self::new_targeting_stored(id, entry_point, runtime)
     }
 
@@ -392,11 +398,16 @@ impl<'a> TransactionV1Builder<'a> {
     /// package via its alias.
     pub fn new_targeting_package_via_alias_with_version_key<A: Into<String>, E: Into<String>>(
         alias: A,
-        version: Option<EntityVersionKey>,
+        version: Option<EntityVersion>,
+        protocol_version_major: Option<ProtocolVersionMajor>,
         entry_point: E,
         runtime: TransactionRuntimeParams,
     ) -> Self {
-        let id = TransactionInvocationTarget::new_package_alias_with_key(alias.into(), version);
+        let id = TransactionInvocationTarget::new_package_alias_with_major(
+            alias.into(),
+            version,
+            protocol_version_major,
+        );
         Self::new_targeting_stored(id, entry_point, runtime)
     }
 

@@ -34,7 +34,7 @@
     trivial_numeric_casts,
     unused_qualifications
 )]
-
+#![allow(clippy::result_large_err)]
 pub mod cli;
 mod error;
 mod json_rpc;
