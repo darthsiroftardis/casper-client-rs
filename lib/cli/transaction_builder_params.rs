@@ -104,7 +104,7 @@ pub enum TransactionBuilderParams<'a> {
         runtime: TransactionRuntimeParams,
     },
     /// Parameters for the package variant of the transaction builder
-    PackageWithVersionKey {
+    PackageWithMajorVersion {
         /// The package hash for the package transaction
         package_hash: PackageHash,
         /// The optional entity version for the package alias transaction
@@ -128,7 +128,7 @@ pub enum TransactionBuilderParams<'a> {
         runtime: TransactionRuntimeParams,
     },
     /// Parameters for the package alias variant of the transaction builder
-    PackageAliasWithVersionKey {
+    PackageAliasWithMajorVersion {
         /// The package alias for the package alias transaction
         package_alias: &'a str,
         /// The optional entity version for the package alias transaction

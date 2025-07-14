@@ -2294,7 +2294,7 @@ pub(super) mod package {
         let runtime = get_transaction_runtime(matches)?;
 
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
-        let params = TransactionBuilderParams::PackageWithVersionKey {
+        let params = TransactionBuilderParams::PackageWithMajorVersion {
             package_hash: package_addr.into(), // TODO: Skip `package_addr` and match directly for hash?
             maybe_entity_version,
             entry_point,
@@ -2355,7 +2355,7 @@ pub(super) mod package_alias {
         let entry_point = session_entry_point::get(matches).unwrap_or_default();
         let runtime = get_transaction_runtime(matches)?;
 
-        let params = TransactionBuilderParams::PackageAliasWithVersionKey {
+        let params = TransactionBuilderParams::PackageAliasWithMajorVersion {
             package_alias,
             maybe_entity_version,
             entry_point,

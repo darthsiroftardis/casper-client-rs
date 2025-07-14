@@ -307,7 +307,7 @@ pub fn make_transaction_builder(
             );
             Ok(transaction_builder)
         }
-        TransactionBuilderParams::PackageWithVersionKey {
+        TransactionBuilderParams::PackageWithMajorVersion {
             package_hash,
             maybe_entity_version,
             entry_point,
@@ -339,7 +339,7 @@ pub fn make_transaction_builder(
             let transaction_builder = new_targeting_package_via_alias;
             Ok(transaction_builder)
         }
-        TransactionBuilderParams::PackageAliasWithVersionKey {
+        TransactionBuilderParams::PackageAliasWithMajorVersion {
             package_alias,
             maybe_entity_version,
             entry_point,

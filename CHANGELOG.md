@@ -9,6 +9,14 @@ All notable changes to this project will be documented in this file.  The format
 [comment]: <> (Fixed:      any bug fixes)
 [comment]: <> (Security:   in case of vulnerabilities)
 
+## 4.0.0
+
+### Added
+* Added two variants `pub enum TransactionBuilderParams<'a>` which allow specifying the major protocol version when creating the transaction
+
+### Modified
+* Modified the package subcommands to take an additional optional arg specifying the major protocol version
+
 
 ## 3.1.0
 
