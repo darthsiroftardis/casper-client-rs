@@ -46,7 +46,7 @@ use serde::Serialize;
 #[cfg(doc)]
 use casper_types::{account::AccountHash, Key};
 
-use casper_types::{Digest, URef};
+use casper_types::{CLValue, Digest, Key, SystemHashRegistry, URef};
 
 use crate::{
     rpcs::{
@@ -85,7 +85,7 @@ pub use json_args::{
 pub use payment_str_params::PaymentStrParams;
 pub use session_str_params::SessionStrParams;
 pub use simple_args::{help as simple_args_help, insert_arg};
-pub use transaction::{make_transaction, put_transaction};
+pub use transaction::{make_transaction, put_transaction, get_maybe_secret_key};
 #[cfg(feature = "std-fs-io")]
 pub use transaction::{
     send_transaction_file, sign_transaction_file, speculative_send_transaction_file,
@@ -510,6 +510,25 @@ pub async fn get_auction_info(
     crate::get_auction_info(rpc_id, node_address, verbosity, maybe_block_id)
         .await
         .map_err(CliError::from)
+}
+
+pub async fn get_system_contract_registry(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+) -> Result<SystemHashRegistry, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let key = Key::SystemEntityRegistry.to_formatted_string();
+    let response = query_global_state("", node_address, verbosity_level, "", "", &key, "")
+        .await?
+        .result
+        .stored_value
+        .as_cl_value()
+        .ok_or_else(CliError::FailedToGetSystemHashRegistry)?;
+
+    CLValue::to_t::<SystemHashRegistry>(response)
+        .map_err(|err| CliError::InvalidCLValue(err.to_string()))
 }
 
 /// Retrieves the status changes of the active validators on the network.

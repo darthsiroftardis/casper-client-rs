@@ -212,6 +212,12 @@ pub enum CliError {
     /// Missing major version.
     #[error("Major version is missing when specifying entity version")]
     MissingMajorVersion,
+
+    #[error("Failed to retrieve system hash registry")]
+    FailedToGetSystemHashRegistry,
+
+    #[error("Missing auction hash")]
+    MissingAuctionHash,
 }
 
 impl From<CLValueError> for CliError {
