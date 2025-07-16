@@ -93,6 +93,9 @@ pub use transaction::{
 pub use transaction_builder_params::TransactionBuilderParams;
 pub use transaction_str_params::TransactionStrParams;
 pub use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
+pub use parse::arg_simple::session::parse as arg_simple_session_parse;
+pub use parse::args_json::session::parse as arg_json_session_parse;
+
 
 /// Retrieves a [`casper_types::Deploy`] from the network.
 ///
@@ -512,22 +515,20 @@ pub async fn get_auction_info(
         .map_err(CliError::from)
 }
 
-pub async fn get_system_contract_registry(
-    maybe_rpc_id: &str,
+/// Retrieve the system hash registry
+pub async fn get_system_hash_registry(
     node_address: &str,
     verbosity_level: u64,
 ) -> Result<SystemHashRegistry, CliError> {
-    let rpc_id = parse::rpc_id(maybe_rpc_id);
-    let verbosity = parse::verbosity(verbosity_level);
     let key = Key::SystemEntityRegistry.to_formatted_string();
     let response = query_global_state("", node_address, verbosity_level, "", "", &key, "")
         .await?
         .result
         .stored_value
-        .as_cl_value()
-        .ok_or_else(CliError::FailedToGetSystemHashRegistry)?;
+        .into_cl_value()
+        .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?;
 
-    CLValue::to_t::<SystemHashRegistry>(response)
+    CLValue::to_t::<SystemHashRegistry>(&response)
         .map_err(|err| CliError::InvalidCLValue(err.to_string()))
 }
 

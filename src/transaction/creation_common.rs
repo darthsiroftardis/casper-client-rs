@@ -2200,6 +2200,7 @@ pub(super) mod invocable_entity {
             .arg(transaction_runtime::arg())
             .arg(transferred_value::arg())
             .arg(chunked_args::arg())
+            .arg(min_bid_override::arg())
     }
 }
 
@@ -2248,6 +2249,7 @@ pub(super) mod invocable_entity_alias {
         invocable_entity_alias_subcommand
             .arg(entity_alias_arg::arg())
             .arg(session_entry_point::arg())
+            .arg(min_bid_override::arg())
     }
 }
 
@@ -2315,6 +2317,7 @@ pub(super) mod package {
             .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
+            .arg(min_bid_override::arg())
     }
 }
 
@@ -2375,6 +2378,7 @@ pub(super) mod package_alias {
             .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
+            .arg(min_bid_override::arg())
     }
 }
 

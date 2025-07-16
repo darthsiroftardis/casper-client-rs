@@ -98,12 +98,13 @@ pub(super) fn session_account(value: &str) -> Result<Option<PublicKey>, CliError
 }
 
 /// Handles providing the arg for and retrieval of simple session and payment args.
-pub mod arg_simple {
+pub(crate) mod arg_simple {
     use super::*;
 
-    pub mod session {
+    pub(crate) mod session {
         use super::*;
 
+        /// Parse session arguments into runtime args.
         pub fn parse(values: &[&str]) -> Result<Option<RuntimeArgs>, CliError> {
             Ok(if values.is_empty() {
                 None
@@ -134,13 +135,14 @@ pub mod arg_simple {
     }
 }
 
-pub mod args_json {
+pub(crate) mod args_json {
     use super::*;
     use crate::cli::JsonArg;
 
     pub mod session {
         use super::*;
 
+        /// Parse session arguments into runtime args.
         pub fn parse(json_str: &str) -> Result<Option<RuntimeArgs>, CliError> {
             get(json_str)
         }

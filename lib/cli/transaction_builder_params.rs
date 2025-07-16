@@ -2,7 +2,7 @@ use casper_types::contracts::ProtocolVersionMajor;
 use casper_types::{
     bytesrepr::Bytes,
     system::auction::{DelegatorKind, Reservation},
-    AddressableEntityHash, EntityVersion, HashAddr, PackageHash, PublicKey,
+    AddressableEntityHash, EntityVersion, PackageHash, PublicKey,
     TransactionRuntimeParams, TransferTarget, URef, U512,
 };
 
@@ -174,24 +174,4 @@ pub enum TransactionBuilderParams<'a> {
         /// The public key for the activate bid transaction
         validator: PublicKey,
     },
-}
-
-impl TransactionBuilderParams {
-    pub fn entry_point_name(&self) -> Option<String> {
-        match self {
-            Self::PackageWithMajorVersion { entry_point, .. }
-            | Self::PackageAliasWithMajorVersion { entry_point, .. }
-            | Self::InvocableEntity { entry_point, .. }
-            | Self::InvocableEntityAlias { entry_point, .. } => Some(entry_point.to_string()),
-            _ => None,
-        }
-    }
-
-    pub fn invocable_hash_addr(&self) -> Option<HashAddr> {
-        if let Self::InvocableEntity { entity_hash, .. } = self {
-            return Some(entity_hash.value());
-        }
-
-        None
-    }
 }

@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use clap::{ArgMatches, Command};
 use serde::{Deserialize, Serialize};
 
-use casper_client::cli::{parse, CliError, PublicKey, TransactionBuilderParams, TransactionStrParams, get_maybe_secret_key, query_global_state};
-use casper_types::{ActivationPoint, CLValue, CoreConfig, HighwayConfig, ProtocolVersion, PublicKey, StorageCosts, SystemConfig, TransactionConfig, VacancyConfig, WasmConfig, U512, HashAddr, Key, SystemHashRegistry};
-use casper_client::Verbosity;
+use casper_client::cli::{CliError, TransactionBuilderParams, get_maybe_secret_key, query_global_state, arg_simple_session_parse, arg_json_session_parse};
+use casper_types::{ActivationPoint, CLValue, CoreConfig, HighwayConfig, ProtocolVersion, PublicKey, StorageCosts, SystemConfig, TransactionConfig, VacancyConfig, WasmConfig, U512, HashAddr, Key};
+
 
 use super::creation_common::{
     activate_bid, add_bid, add_reservations, cancel_reservations, change_bid_public_key, delegate,
@@ -194,7 +194,7 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         min_bid_override,
     } = &transaction_builder_params
     {
-        do_withdraw_amount_checks(node_address, verbosity_level, public_key.clone(), amount.clone(), *min_bid_override)?;
+        do_withdraw_amount_checks(node_address, verbosity_level, public_key.clone(), amount.clone(), *min_bid_override).await?;
     }
 
     casper_client::cli::put_transaction(
@@ -360,9 +360,9 @@ async fn put_entity_by_name_transaction(arg_matches: &ArgMatches) -> Result<Succ
             .await?
             .result
             .stored_value
-            .as_cl_value()
-            .unwrap();
-        let key = CLValue::to_t::<Key>(cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
+            .into_cl_value()
+            .ok_or_else(|| CliError::InvalidCLValue("failed to get value under named key".to_string()))?;
+        let key = CLValue::to_t::<Key>(&cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
         match key {
             Key::Hash(hash_addr) => {
                 let entry_point = entry_point.to_string();
@@ -443,9 +443,9 @@ async fn put_package_by_name_transaction(arg_matches: &ArgMatches) -> Result<Suc
             .await?
             .result
             .stored_value
-            .as_cl_value()
-            .unwrap();
-        let key = CLValue::to_t::<Key>(cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
+            .into_cl_value()
+            .ok_or_else(|| CliError::InvalidCLValue("failed to get value under named key".to_string()))?;
+        let key = CLValue::to_t::<Key>(&cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
         match key {
             Key::Hash(hash_addr) => {
                 let entry_point = entry_point.to_string();
@@ -536,11 +536,11 @@ async fn do_withdraw_amount_checks(
         .result
         .auction_state
         .bids()
-        .find(|(bid_key, _bid)| **bid_key == *public_key)
+        .find(|(bid_key, _bid)| **bid_key == public_key)
     {
         Some((_, bid)) => {
             let staked_amount = *bid.staked_amount();
-            let remainder = staked_amount.saturating_sub(*amount);
+            let remainder = staked_amount.saturating_sub(amount);
             if remainder < U512::from(minimum_validator_bid) {
                 if !min_bid_override {
                     return Err(CliError::ReducedStakeBelowMinAmount);
@@ -567,43 +567,43 @@ async fn check_auction_state_for_withdraw(
     // Best guess on the entry point name
     if entry_point_name == "withdraw".to_string() {
         let registry =
-            casper_client::cli::get_system_contract_registry("", node_address, verbosity_level)
+            casper_client::cli::get_system_hash_registry(node_address, verbosity_level)
                 .await?;
         let auction_hash_addr = *registry
             .get("auction")
-            .ok_or_else(CliError::MissingAuctionHash)?;
+            .ok_or_else(|| CliError::MissingAuctionHash)?;
         // First check if we are calling the auction.
         if auction_hash_addr == hash_addr {
             // Now parse the args for the amount to do the value check.
         } else {
             // check if the hash addr matches the package hash addr on the contract itself.
             let key = Key::Hash(auction_hash_addr);
-            let package_addr = query_global_state("", node_address, verbosity_level, "", "", &key, "")
+            let package_addr = query_global_state("", node_address, verbosity_level, "", "", &key.to_formatted_string(), "")
                 .await?
                 .result
                 .stored_value
                 .as_contract()
-                .ok_or_else(CliError::FailedToGetSystemHashRegistry)?.contract_package_hash().value();
-            if (package_addr != hash_addr) {
+                .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?.contract_package_hash().value();
+            if package_addr != hash_addr {
                 return Ok(())
             }
         }
 
         if let Some(runtime_args) =
-            parse::args_json::session::parse(&session_args_as_json)?
+            arg_json_session_parse(&session_args_as_json)?
         {
             match runtime_args.get("amount").map(|cl| {
                 CLValue::to_t::<U512>(cl)
-                    .map_err(|err| CliError::InvalidCLValue(err.to_string()))?
+                    .map_err(|err| CliError::InvalidCLValue(err.to_string()))
             }) {
-                Some(amount) => {
+                Some(Ok(amount )) => {
                     let public_key = runtime_args
                         .get("public_key")
                         .map(|cl| {
                             CLValue::to_t::<PublicKey>(cl)
-                                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?
+                                .map_err(|err| CliError::InvalidCLValue(err.to_string()))
                         })
-                        .unwrap();
+                        .ok_or_else(||CliError::InvalidCLValue("failed to get public key".to_string()))??;
                     return do_withdraw_amount_checks(
                         node_address,
                         verbosity_level,
@@ -613,26 +613,26 @@ async fn check_auction_state_for_withdraw(
                     )
                         .await;
                 }
-                None => {
+                Some(Err(_)) | None => {
                     println!("no amount arg found, skipping withdraw check")
                 }
             };
         };
         if let Some(runtime_args) =
-            parse::arg_simple::session::parse(&session_args_simple)?
+            arg_simple_session_parse(&session_args_simple)?
         {
             match runtime_args.get("amount").map(|cl| {
                 CLValue::to_t::<U512>(cl)
-                    .map_err(|err| CliError::InvalidCLValue(err.to_string()))?
+                    .map_err(|err| CliError::InvalidCLValue(err.to_string()))
             }) {
-                Some(amount) => {
+                Some(Ok(amount)) => {
                     let public_key = runtime_args
                         .get("public_key")
                         .map(|cl| {
                             CLValue::to_t::<PublicKey>(cl)
-                                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?
+                                .map_err(|err| CliError::InvalidCLValue(err.to_string()))
                         })
-                        .unwrap();
+                        .ok_or_else(|| CliError::InvalidCLValue("Unable to get public key".to_string()))??;
                     return do_withdraw_amount_checks(
                         node_address,
                         verbosity_level,
@@ -642,7 +642,7 @@ async fn check_auction_state_for_withdraw(
                     )
                         .await
                 }
-                None => {
+                Some(Err(_)) | None => {
                     println!("no amount arg found, skipping withdraw check")
                 }
             };
