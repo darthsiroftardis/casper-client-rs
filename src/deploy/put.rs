@@ -30,7 +30,8 @@ impl ClientCommand for PutDeploy {
             .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
             .arg(common::rpc_id::arg(DisplayOrder::RpcId as usize))
             .arg(creation_common::speculative_exec::arg())
-            .arg(creation_common::gas_price::arg());
+            .arg(creation_common::gas_price::arg())
+            .arg(creation_common::min_bid_override::arg());
         let subcommand = creation_common::apply_common_session_options(subcommand);
         let subcommand = creation_common::apply_common_payment_options(subcommand, None);
         creation_common::apply_common_creation_options(subcommand, true, true)

@@ -220,6 +220,10 @@ pub enum CliError {
     /// Failed to get auction hash.
     #[error("Missing auction hash")]
     MissingAuctionHash,
+
+    /// Failed to get state root hash
+    #[error("Failed to retrieve state root hash")]
+    FailedToGetStateRootHash,
 }
 
 impl From<CLValueError> for CliError {

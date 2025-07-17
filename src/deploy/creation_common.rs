@@ -51,6 +51,7 @@ pub(super) enum DisplayOrder {
     PaymentPackageName,
     PaymentEntryPoint,
     PaymentVersion,
+    MinBidOverride,
 }
 
 /// Handles providing the arg for and executing the show-simple-arg-examples option.

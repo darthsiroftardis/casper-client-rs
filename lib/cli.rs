@@ -521,7 +521,14 @@ pub async fn get_system_hash_registry(
     verbosity_level: u64,
 ) -> Result<SystemHashRegistry, CliError> {
     let key = Key::SystemEntityRegistry.to_formatted_string();
-    let response = query_global_state("", node_address, verbosity_level, "", "", &key, "")
+    let state_root_hash = *get_block("", node_address, 0, "").await?
+        .result
+        .block_with_signatures
+        .ok_or_else(|| CliError::FailedToGetStateRootHash)?
+        .block
+        .state_root_hash();
+    let encoded_hash = base16::encode_lower(&state_root_hash);
+    let response = query_global_state("", node_address, verbosity_level, "", &encoded_hash, &key, "")
         .await?
         .result
         .stored_value

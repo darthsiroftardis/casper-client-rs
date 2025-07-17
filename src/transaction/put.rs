@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use clap::{ArgMatches, Command};
 use serde::{Deserialize, Serialize};
 
-use casper_client::cli::{CliError, TransactionBuilderParams, get_maybe_secret_key, query_global_state, arg_simple_session_parse, arg_json_session_parse};
+use casper_client::cli::{CliError, TransactionBuilderParams, get_maybe_secret_key, query_global_state, arg_simple_session_parse, arg_json_session_parse, get_block};
 use casper_types::{ActivationPoint, CLValue, CoreConfig, HighwayConfig, ProtocolVersion, PublicKey, StorageCosts, SystemConfig, TransactionConfig, VacancyConfig, WasmConfig, U512, HashAddr, Key};
 
 
@@ -194,7 +194,7 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         min_bid_override,
     } = &transaction_builder_params
     {
-        do_withdraw_amount_checks(node_address, verbosity_level, public_key.clone(), amount.clone(), *min_bid_override).await?;
+        do_withdraw_amount_checks(node_address, public_key.clone(), amount.clone(), *min_bid_override).await?;
     }
 
     casper_client::cli::put_transaction(
@@ -516,12 +516,11 @@ async fn put_transfer_transaction(arg_matches: &ArgMatches) -> Result<Success, C
 
 async fn do_withdraw_amount_checks(
     node_address: &str,
-    verbosity_level: u64,
     public_key: PublicKey,
     amount: U512,
     min_bid_override: bool,
 ) -> Result<(), CliError> {
-    let chainspec_bytes = casper_client::cli::get_chainspec("", node_address, verbosity_level)
+    let chainspec_bytes = casper_client::cli::get_chainspec("", node_address, 0)
         .await?
         .result
         .chainspec_bytes;
@@ -531,7 +530,7 @@ async fn do_withdraw_amount_checks(
 
     let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
-    match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
+    match casper_client::cli::get_auction_info("", node_address, 0, "")
         .await?
         .result
         .auction_state
@@ -564,8 +563,15 @@ async fn check_auction_state_for_withdraw(
     session_args_as_json: String,
     session_args_simple: Vec<&str>,
 ) -> Result<(), CliError> {
-    // Best guess on the entry point name
-    if entry_point_name == "withdraw".to_string() {
+    let state_root_hash = *get_block("", node_address, 0, "").await?
+        .result
+        .block_with_signatures
+        .ok_or_else(|| CliError::FailedToGetStateRootHash)?
+        .block
+        .state_root_hash();
+    let encoded_hash = base16::encode_lower(&state_root_hash);
+    // // Best guess on the entry point name
+    if entry_point_name == "withdraw_bid".to_string() {
         let registry =
             casper_client::cli::get_system_hash_registry(node_address, verbosity_level)
                 .await?;
@@ -578,13 +584,14 @@ async fn check_auction_state_for_withdraw(
         } else {
             // check if the hash addr matches the package hash addr on the contract itself.
             let key = Key::Hash(auction_hash_addr);
-            let package_addr = query_global_state("", node_address, verbosity_level, "", "", &key.to_formatted_string(), "")
+            let package_addr = query_global_state("", node_address, verbosity_level, "", &encoded_hash, &key.to_formatted_string(), "")
                 .await?
                 .result
                 .stored_value
                 .as_contract()
                 .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?.contract_package_hash().value();
             if package_addr != hash_addr {
+                println!("exiting could not determine auction as target");
                 return Ok(())
             }
         }
@@ -606,7 +613,6 @@ async fn check_auction_state_for_withdraw(
                         .ok_or_else(||CliError::InvalidCLValue("failed to get public key".to_string()))??;
                     return do_withdraw_amount_checks(
                         node_address,
-                        verbosity_level,
                         public_key,
                         amount,
                         min_bid_override,
@@ -635,7 +641,6 @@ async fn check_auction_state_for_withdraw(
                         .ok_or_else(|| CliError::InvalidCLValue("Unable to get public key".to_string()))??;
                     return do_withdraw_amount_checks(
                         node_address,
-                        verbosity_level,
                         public_key,
                         amount,
                         min_bid_override,
