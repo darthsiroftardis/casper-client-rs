@@ -439,7 +439,14 @@ async fn put_package_by_name_transaction(arg_matches: &ArgMatches) -> Result<Suc
             Key::Account(PublicKey::from(&secret_key)
                 .to_account_hash())
         };
-        let cl_value = casper_client::cli::query_global_state(rpc_id, node_address, verbosity_level, "", "", &account_key.to_formatted_string(), package_alias)
+        let state_root_hash = *get_block("", node_address, 0, "").await?
+            .result
+            .block_with_signatures
+            .ok_or_else(|| CliError::FailedToGetStateRootHash)?
+            .block
+            .state_root_hash();
+        let encoded_hash = base16::encode_lower(&state_root_hash);
+        let cl_value = casper_client::cli::query_global_state(rpc_id, node_address, verbosity_level, "", &encoded_hash, &account_key.to_formatted_string(), package_alias)
             .await?
             .result
             .stored_value

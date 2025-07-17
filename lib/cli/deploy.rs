@@ -3,7 +3,7 @@
 use casper_types::{account::AccountHash, AsymmetricType, Deploy, PublicKey, TransferTarget, UIntParseError, URef, U512, ExecutableDeployItem, ProtocolVersion, ActivationPoint, CoreConfig, TransactionConfig, HighwayConfig, WasmConfig, SystemConfig, VacancyConfig, StorageCosts, HashAddr, Key, CLValue, RuntimeArgs};
 use serde::{Deserialize, Serialize};
 
-use super::{parse, transaction::get_maybe_secret_key, CliError, DeployStrParams, PaymentStrParams, SessionStrParams, query_global_state};
+use super::{parse, transaction::get_maybe_secret_key, CliError, DeployStrParams, PaymentStrParams, SessionStrParams, query_global_state, get_block};
 use crate::{cli::DeployBuilder, rpcs::results::{PutDeployResult, SpeculativeExecResult}, SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY};
 
 
@@ -139,6 +139,13 @@ async fn check_auction_state_for_withdraw(
 
 async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), CliError> {
     let session = deploy.session();
+    let state_root_hash = *get_block("", node_address, 0, "").await?
+        .result
+        .block_with_signatures
+        .ok_or_else(|| CliError::FailedToGetStateRootHash)?
+        .block
+        .state_root_hash();
+    let encoded_hash = base16::encode_lower(&state_root_hash);
     match session {
         ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => { return Ok(())}
         ExecutableDeployItem::StoredContractByHash { entry_point, hash, args  } => {
@@ -147,7 +154,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
         }
         ExecutableDeployItem::StoredContractByName { name, entry_point, args } => {
             let account = Key::Account(deploy.account().to_account_hash());
-            let cl_value = query_global_state("", node_address, 0, "", "", &account.to_formatted_string(), name)
+            let cl_value = query_global_state("", node_address, 0, "", &encoded_hash, &account.to_formatted_string(), name)
                 .await?
                 .result
                 .stored_value
@@ -167,7 +174,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
         }
         ExecutableDeployItem::StoredVersionedContractByName { name, entry_point, args, ..  } => {
             let account = Key::Account(deploy.account().to_account_hash());
-            let cl_value = query_global_state("", node_address, 0, "", "", &account.to_formatted_string(), name)
+            let cl_value = query_global_state("", node_address, 0, "", &encoded_hash, &account.to_formatted_string(), name)
                 .await?
                 .result
                 .stored_value
