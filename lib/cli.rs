@@ -71,7 +71,7 @@ use crate::{Account, Block, Error, StoredValue, Transfer};
 use casper_types::PublicKey;
 #[cfg(feature = "std-fs-io")]
 pub use deploy::{
-    make_deploy, make_transfer, put_deploy, send_deploy_file, sign_deploy_file,
+    make_deploy, make_transfer, put_deploy, put_deploy_with_min_bid_override, send_deploy_file, sign_deploy_file,
     speculative_put_deploy, speculative_send_deploy_file, speculative_transfer, transfer,
 };
 pub use deploy_builder::{DeployBuilder, DeployBuilderError};

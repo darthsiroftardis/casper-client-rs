@@ -100,6 +100,7 @@ async fn check_auction_state_for_withdraw(
     hash_addr: HashAddr,
     entry_point_name: String,
     runtime_args: &RuntimeArgs,
+    min_bid_override: bool,
 ) -> Result<(), CliError> {
     // Best guess on the entry point name
     if entry_point_name == "withdraw".to_string() {
@@ -143,12 +144,12 @@ async fn check_auction_state_for_withdraw(
             .ok_or_else(|| CliError::InvalidCLValue("count not parse amount".to_string()))?
             .to_t::<PublicKey>()
             .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-        return do_withdraw_amount_checks(node_address, 0, public_key, amount, true).await;
+        return do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override).await;
     }
     Ok(())
 }
 
-async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), CliError> {
+async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &Deploy) -> Result<(), CliError> {
     let session = deploy.session();
     let state_root_hash = *get_block("", node_address, 0, "")
         .await?
@@ -168,7 +169,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
             args,
         } => {
             let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
                 .await
         }
         ExecutableDeployItem::StoredContractByName {
@@ -201,7 +202,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
                         Key::SmartContract(addr) => addr,
                         _ => return Ok(()),
                     };
-                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
                         .await
                 }
                 None => {
@@ -209,10 +210,6 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
                     return Ok(())
                 }
             }
-
-
-
-
         }
         ExecutableDeployItem::StoredVersionedContractByHash {
             entry_point,
@@ -221,7 +218,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
             ..
         } => {
             let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
                 .await
         }
         ExecutableDeployItem::StoredVersionedContractByName {
@@ -255,7 +252,7 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
                         Key::SmartContract(addr) => addr,
                         _ => return Ok(()),
                     };
-                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
                         .await
                 }
                 None => {
@@ -282,7 +279,30 @@ pub async fn put_deploy(
     let rpc_id = parse::rpc_id(maybe_rpc_id);
     let verbosity = parse::verbosity(verbosity_level);
     let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
-    do_deploy_checks(node_address, &deploy).await?;
+    do_deploy_checks(node_address, true, &deploy).await?;
+    #[allow(deprecated)]
+    crate::put_deploy(rpc_id, node_address, verbosity, deploy)
+        .await
+        .map_err(CliError::from)
+}
+
+/// Creates a [`Deploy`] and sends it to the network for execution.
+///
+/// For details of the parameters, see [the module docs](crate::cli#common-parameters) or the docs
+/// of the individual parameter types.
+pub async fn put_deploy_with_min_bid_override(
+    maybe_rpc_id: &str,
+    node_address: &str,
+    verbosity_level: u64,
+    min_bid_override: bool,
+    deploy_params: DeployStrParams<'_>,
+    session_params: SessionStrParams<'_>,
+    payment_params: PaymentStrParams<'_>,
+) -> Result<SuccessResponse<PutDeployResult>, CliError> {
+    let rpc_id = parse::rpc_id(maybe_rpc_id);
+    let verbosity = parse::verbosity(verbosity_level);
+    let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
+    do_deploy_checks(node_address, min_bid_override, &deploy).await?;
     #[allow(deprecated)]
     crate::put_deploy(rpc_id, node_address, verbosity, deploy)
         .await

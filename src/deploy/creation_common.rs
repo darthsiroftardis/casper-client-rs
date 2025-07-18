@@ -447,6 +447,27 @@ pub(super) mod gas_price {
     }
 }
 
+pub(super) mod min_bid_override {
+    use super::*;
+
+    const ARG_NAME: &str = "min-bid-override";
+
+    const ARG_HELP: &str = "Flag to override the min bid staking amount check";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .action(ArgAction::SetTrue)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::MinBidOverride as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> bool {
+        matches.get_flag(ARG_NAME)
+    }
+}
+
 /// Handles providing the arg for and retrieval of JSON session and payment args.
 pub(super) mod args_json {
     use super::*;
