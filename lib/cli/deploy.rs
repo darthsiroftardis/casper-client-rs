@@ -1,11 +1,22 @@
 //! Functions facilitating sending of [`Deploy`]s to the network
 
-use casper_types::{account::AccountHash, AsymmetricType, Deploy, PublicKey, TransferTarget, UIntParseError, URef, U512, ExecutableDeployItem, ProtocolVersion, ActivationPoint, CoreConfig, TransactionConfig, HighwayConfig, WasmConfig, SystemConfig, VacancyConfig, StorageCosts, HashAddr, Key, CLValue, RuntimeArgs};
+use casper_types::{
+    account::AccountHash, ActivationPoint, AsymmetricType, CLValue, CoreConfig, Deploy,
+    ExecutableDeployItem, HashAddr, HighwayConfig, Key, ProtocolVersion, PublicKey, RuntimeArgs,
+    StorageCosts, SystemConfig, TransactionConfig, TransferTarget, UIntParseError, URef,
+    VacancyConfig, WasmConfig, U512,
+};
 use serde::{Deserialize, Serialize};
 
-use super::{parse, transaction::get_maybe_secret_key, CliError, DeployStrParams, PaymentStrParams, SessionStrParams, query_global_state, get_block};
-use crate::{cli::DeployBuilder, rpcs::results::{PutDeployResult, SpeculativeExecResult}, SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY};
-
+use super::{
+    get_block, parse, query_global_state, transaction::get_maybe_secret_key, CliError,
+    DeployStrParams, PaymentStrParams, SessionStrParams,
+};
+use crate::{
+    cli::DeployBuilder,
+    rpcs::results::{PutDeployResult, SpeculativeExecResult},
+    SuccessResponse, MAX_SERIALIZED_SIZE_OF_DEPLOY,
+};
 
 const DEFAULT_GAS_PRICE: u64 = 1;
 
@@ -41,7 +52,6 @@ pub(super) struct TomlChainspec {
     vacancy: VacancyConfig,
     storage_costs: StorageCosts,
 }
-
 
 pub(crate) async fn do_withdraw_amount_checks(
     node_address: &str,
@@ -84,7 +94,6 @@ pub(crate) async fn do_withdraw_amount_checks(
     Ok(())
 }
 
-
 async fn check_auction_state_for_withdraw(
     node_address: &str,
     verbosity_level: u64,
@@ -94,9 +103,7 @@ async fn check_auction_state_for_withdraw(
 ) -> Result<(), CliError> {
     // Best guess on the entry point name
     if entry_point_name == "withdraw".to_string() {
-        let registry =
-            crate::cli::get_system_hash_registry(node_address, verbosity_level)
-                .await?;
+        let registry = crate::cli::get_system_hash_registry(node_address, verbosity_level).await?;
         let auction_hash_addr = *registry
             .get("auction")
             .ok_or_else(|| CliError::MissingAuctionHash)?;
@@ -106,40 +113,45 @@ async fn check_auction_state_for_withdraw(
         } else {
             // check if the hash addr matches the package hash addr on the contract itself.
             let key = Key::Hash(auction_hash_addr);
-            let package_addr = query_global_state("", node_address, verbosity_level, "", "", &key.to_formatted_string(), "")
-                .await?
-                .result
-                .stored_value
-                .as_contract()
-                .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?.contract_package_hash().value();
+            let package_addr = query_global_state(
+                "",
+                node_address,
+                verbosity_level,
+                "",
+                "",
+                &key.to_formatted_string(),
+                "",
+            )
+            .await?
+            .result
+            .stored_value
+            .as_contract()
+            .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?
+            .contract_package_hash()
+            .value();
             if package_addr != hash_addr {
-                return Ok(())
+                return Ok(());
             }
         }
-        let amount = runtime_args.get("amount")
+        let amount = runtime_args
+            .get("amount")
             .ok_or_else(|| CliError::InvalidCLValue("count not parse amount".to_string()))?
             .to_t::<U512>()
             .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-        let public_key = runtime_args.get("public_key")
+        let public_key = runtime_args
+            .get("public_key")
             .ok_or_else(|| CliError::InvalidCLValue("count not parse amount".to_string()))?
             .to_t::<PublicKey>()
             .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-        return do_withdraw_amount_checks(
-            node_address,
-            0,
-            public_key,
-            amount,
-            true
-        ).await
+        return do_withdraw_amount_checks(node_address, 0, public_key, amount, true).await;
     }
     Ok(())
 }
 
-
-
 async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), CliError> {
     let session = deploy.session();
-    let state_root_hash = *get_block("", node_address, 0, "").await?
+    let state_root_hash = *get_block("", node_address, 0, "")
+        .await?
         .result
         .block_with_signatures
         .ok_or_else(|| CliError::FailedToGetStateRootHash)?
@@ -147,51 +159,90 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
         .state_root_hash();
     let encoded_hash = base16::encode_lower(&state_root_hash);
     match session {
-        ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => { return Ok(())}
-        ExecutableDeployItem::StoredContractByHash { entry_point, hash, args  } => {
-            let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args).await
+        ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => {
+            return Ok(())
         }
-        ExecutableDeployItem::StoredContractByName { name, entry_point, args } => {
+        ExecutableDeployItem::StoredContractByHash {
+            entry_point,
+            hash,
+            args,
+        } => {
+            let hash_addr = hash.value();
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                .await
+        }
+        ExecutableDeployItem::StoredContractByName {
+            name,
+            entry_point,
+            args,
+        } => {
             let account = Key::Account(deploy.account().to_account_hash());
-            let cl_value = query_global_state("", node_address, 0, "", &encoded_hash, &account.to_formatted_string(), name)
-                .await?
-                .result
-                .stored_value
-                .into_cl_value()
-                .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = CLValue::to_t::<Key>(&cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
+            let cl_value = query_global_state(
+                "",
+                node_address,
+                0,
+                "",
+                &encoded_hash,
+                &account.to_formatted_string(),
+                name,
+            )
+            .await?
+            .result
+            .stored_value
+            .into_cl_value()
+            .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
+            let key = CLValue::to_t::<Key>(&cl_value)
+                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
             let hash_addr = match key {
                 Key::Hash(addr) => addr,
                 Key::SmartContract(addr) => addr,
-                _ => return Ok(())
+                _ => return Ok(()),
             };
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args).await
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                .await
         }
-        ExecutableDeployItem::StoredVersionedContractByHash { entry_point, hash, args, .. } => {
+        ExecutableDeployItem::StoredVersionedContractByHash {
+            entry_point,
+            hash,
+            args,
+            ..
+        } => {
             let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args).await
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                .await
         }
-        ExecutableDeployItem::StoredVersionedContractByName { name, entry_point, args, ..  } => {
+        ExecutableDeployItem::StoredVersionedContractByName {
+            name,
+            entry_point,
+            args,
+            ..
+        } => {
             let account = Key::Account(deploy.account().to_account_hash());
-            let cl_value = query_global_state("", node_address, 0, "", &encoded_hash, &account.to_formatted_string(), name)
-                .await?
-                .result
-                .stored_value
-                .into_cl_value()
-                .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = CLValue::to_t::<Key>(&cl_value).map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
+            let cl_value = query_global_state(
+                "",
+                node_address,
+                0,
+                "",
+                &encoded_hash,
+                &account.to_formatted_string(),
+                name,
+            )
+            .await?
+            .result
+            .stored_value
+            .into_cl_value()
+            .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
+            let key = CLValue::to_t::<Key>(&cl_value)
+                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
             let hash_addr = match key {
                 Key::Hash(addr) => addr,
                 Key::SmartContract(addr) => addr,
-                _ => return Ok(())
+                _ => return Ok(()),
             };
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args).await
+            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                .await
         }
     }
-
-
-
 }
 
 /// Creates a [`Deploy`] and sends it to the network for execution.

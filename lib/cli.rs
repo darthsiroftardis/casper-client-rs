@@ -82,10 +82,12 @@ pub(crate) use fields_container::{FieldsContainer, FieldsContainerError};
 pub use json_args::{
     help as json_args_help, Error as JsonArgsError, ErrorDetails as JsonArgsErrorDetails, JsonArg,
 };
+pub use parse::arg_simple::session::parse as arg_simple_session_parse;
+pub use parse::args_json::session::parse as arg_json_session_parse;
 pub use payment_str_params::PaymentStrParams;
 pub use session_str_params::SessionStrParams;
 pub use simple_args::{help as simple_args_help, insert_arg};
-pub use transaction::{make_transaction, put_transaction, get_maybe_secret_key};
+pub use transaction::{get_maybe_secret_key, make_transaction, put_transaction};
 #[cfg(feature = "std-fs-io")]
 pub use transaction::{
     send_transaction_file, sign_transaction_file, speculative_send_transaction_file,
@@ -93,9 +95,6 @@ pub use transaction::{
 pub use transaction_builder_params::TransactionBuilderParams;
 pub use transaction_str_params::TransactionStrParams;
 pub use transaction_v1_builder::{TransactionV1Builder, TransactionV1BuilderError};
-pub use parse::arg_simple::session::parse as arg_simple_session_parse;
-pub use parse::args_json::session::parse as arg_json_session_parse;
-
 
 /// Retrieves a [`casper_types::Deploy`] from the network.
 ///
@@ -521,19 +520,28 @@ pub async fn get_system_hash_registry(
     verbosity_level: u64,
 ) -> Result<SystemHashRegistry, CliError> {
     let key = Key::SystemEntityRegistry.to_formatted_string();
-    let state_root_hash = *get_block("", node_address, 0, "").await?
+    let state_root_hash = *get_block("", node_address, 0, "")
+        .await?
         .result
         .block_with_signatures
         .ok_or_else(|| CliError::FailedToGetStateRootHash)?
         .block
         .state_root_hash();
     let encoded_hash = base16::encode_lower(&state_root_hash);
-    let response = query_global_state("", node_address, verbosity_level, "", &encoded_hash, &key, "")
-        .await?
-        .result
-        .stored_value
-        .into_cl_value()
-        .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?;
+    let response = query_global_state(
+        "",
+        node_address,
+        verbosity_level,
+        "",
+        &encoded_hash,
+        &key,
+        "",
+    )
+    .await?
+    .result
+    .stored_value
+    .into_cl_value()
+    .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?;
 
     CLValue::to_t::<SystemHashRegistry>(&response)
         .map_err(|err| CliError::InvalidCLValue(err.to_string()))

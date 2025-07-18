@@ -11,7 +11,7 @@ use casper_types::{
 use casper_types::{CLValueError, KeyFromStrError, UIntParseError, URefFromStrError};
 pub use uint::FromDecStrErr;
 
-use crate::cli::JsonArgsError;
+use crate::cli::{FieldsContainerError, JsonArgsError};
 #[cfg(doc)]
 use crate::rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier};
 
@@ -224,6 +224,10 @@ pub enum CliError {
     /// Failed to get state root hash
     #[error("Failed to retrieve state root hash")]
     FailedToGetStateRootHash,
+
+    /// Failed to parse the transaction target.
+    #[error("Failed to parse the transaction target: {0}")]
+    FailedToParseTransactionPayloadField(String),
 }
 
 impl From<CLValueError> for CliError {
