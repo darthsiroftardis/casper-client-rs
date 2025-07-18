@@ -11,7 +11,7 @@ use casper_types::{
 use casper_types::{CLValueError, KeyFromStrError, UIntParseError, URefFromStrError};
 pub use uint::FromDecStrErr;
 
-use crate::cli::{FieldsContainerError, JsonArgsError};
+use crate::cli::{ JsonArgsError};
 #[cfg(doc)]
 use crate::rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier};
 

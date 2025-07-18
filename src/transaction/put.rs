@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use clap::{ArgMatches, Command};
 use serde::{Deserialize, Serialize};
 
-use casper_client::cli::{CliError, TransactionBuilderParams};
+use casper_client::cli::{CliError};
 use casper_types::{
     ActivationPoint, CoreConfig, HighwayConfig, ProtocolVersion, StorageCosts, SystemConfig,
-    TransactionConfig, VacancyConfig, WasmConfig, U512,
+    TransactionConfig, VacancyConfig, WasmConfig,
 };
 
 use super::creation_common::{

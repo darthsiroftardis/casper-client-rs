@@ -1,7 +1,7 @@
 //! Functions facilitating sending of [`Deploy`]s to the network
 
 use casper_types::{
-    account::AccountHash, ActivationPoint, AsymmetricType, CLValue, CoreConfig, Deploy,
+    account::AccountHash, ActivationPoint, AsymmetricType, CoreConfig, Deploy,
     ExecutableDeployItem, HashAddr, HighwayConfig, Key, ProtocolVersion, PublicKey, RuntimeArgs,
     StorageCosts, SystemConfig, TransactionConfig, TransferTarget, UIntParseError, URef,
     VacancyConfig, WasmConfig, U512,
@@ -103,7 +103,7 @@ async fn check_auction_state_for_withdraw(
     min_bid_override: bool,
 ) -> Result<(), CliError> {
     // Best guess on the entry point name
-    if entry_point_name == "withdraw".to_string() {
+    if entry_point_name == *"withdraw_bid" {
         let registry = crate::cli::get_system_hash_registry(node_address, verbosity_level).await?;
         let auction_hash_addr = *registry
             .get("auction")
@@ -161,7 +161,7 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
     let encoded_hash = base16::encode_lower(&state_root_hash);
     match session {
         ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => {
-            return Ok(())
+            Ok(())
         }
         ExecutableDeployItem::StoredContractByHash {
             entry_point,
@@ -194,7 +194,7 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
             .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
             let key = cl_value
                 .named_keys()
-                .get(&name);
+                .get(name);
             match key {
                 Some(key) => {
                     let hash_addr = match *key {
@@ -207,7 +207,7 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                 }
                 None => {
                     println!("unable to get named key skipping withdrawal checks");
-                    return Ok(())
+                    Ok(())
                 }
             }
         }
@@ -244,7 +244,7 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                 .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
             let key = account
                 .named_keys()
-                .get(&name);
+                .get(name);
             match key {
                 Some(key) => {
                     let hash_addr = match *key {
@@ -257,7 +257,7 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                 }
                 None => {
                     println!("unable to get named key skipping withdrawal checks");
-                    return Ok(())
+                    Ok(())
                 }
             }
         }

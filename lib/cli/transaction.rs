@@ -1,5 +1,5 @@
-use crate::cli::deploy::{do_withdraw_amount_checks, TomlChainspec};
-use crate::cli::{arg_json_session_parse, arg_simple_session_parse, get_block, query_global_state};
+use crate::cli::deploy::{do_withdraw_amount_checks};
+use crate::cli::{get_block, query_global_state};
 #[cfg(feature = "std-fs-io")]
 use crate::read_transaction_file;
 #[cfg(feature = "std-fs-io")]
@@ -13,7 +13,7 @@ use crate::{
     SuccessResponse,
 };
 use casper_types::{
-    CLValue, Digest, HashAddr, InitiatorAddr, Key, PublicKey, SecretKey, Transaction,
+    Digest, InitiatorAddr, Key, PublicKey, SecretKey, Transaction,
     TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
     TransactionTarget, U512,
 };
@@ -484,7 +484,7 @@ async fn check_auction_state_for_withdraw(
             let do_amount_checks = match entry_point {
                 TransactionEntryPoint::WithdrawBid => true,
                 TransactionEntryPoint::Custom(name) => {
-                    if "withdraw_bid".to_string() != name {
+                    if *"withdraw_bid" != name {
                         // Entry point is not withdraw bid exiting
                         return Ok(());
                     }
