@@ -228,6 +228,11 @@ pub enum CliError {
     /// Failed to parse the transaction target.
     #[error("Failed to parse the transaction target: {0}")]
     FailedToParseTransactionPayloadField(String),
+
+
+    /// Unexpected Stored value
+    #[error("unexpected stored value")]
+    UnexpectedStoredValue
 }
 
 impl From<CLValueError> for CliError {

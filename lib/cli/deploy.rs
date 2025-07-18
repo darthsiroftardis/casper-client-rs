@@ -184,22 +184,35 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
                 "",
                 &encoded_hash,
                 &account.to_formatted_string(),
-                name,
+                ""
             )
             .await?
             .result
             .stored_value
-            .into_cl_value()
+            .into_account()
             .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = CLValue::to_t::<Key>(&cl_value)
-                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-            let hash_addr = match key {
-                Key::Hash(addr) => addr,
-                Key::SmartContract(addr) => addr,
-                _ => return Ok(()),
-            };
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
-                .await
+            let key = cl_value
+                .named_keys()
+                .get(&name);
+            match key {
+                Some(key) => {
+                    let hash_addr = match *key {
+                        Key::Hash(addr) => addr,
+                        Key::SmartContract(addr) => addr,
+                        _ => return Ok(()),
+                    };
+                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                        .await
+                }
+                None => {
+                    println!("unable to get named key skipping withdrawal checks");
+                    return Ok(())
+                }
+            }
+
+
+
+
         }
         ExecutableDeployItem::StoredVersionedContractByHash {
             entry_point,
@@ -218,29 +231,38 @@ async fn do_deploy_checks(node_address: &str, deploy: &Deploy) -> Result<(), Cli
             ..
         } => {
             let account = Key::Account(deploy.account().to_account_hash());
-            let cl_value = query_global_state(
+            let account = query_global_state(
                 "",
                 node_address,
                 0,
                 "",
                 &encoded_hash,
                 &account.to_formatted_string(),
-                name,
+                "",
             )
             .await?
             .result
             .stored_value
-            .into_cl_value()
-            .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = CLValue::to_t::<Key>(&cl_value)
-                .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-            let hash_addr = match key {
-                Key::Hash(addr) => addr,
-                Key::SmartContract(addr) => addr,
-                _ => return Ok(()),
-            };
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
-                .await
+                .into_account()
+                .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
+            let key = account
+                .named_keys()
+                .get(&name);
+            match key {
+                Some(key) => {
+                    let hash_addr = match *key {
+                        Key::Hash(addr) => addr,
+                        Key::SmartContract(addr) => addr,
+                        _ => return Ok(()),
+                    };
+                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args)
+                        .await
+                }
+                None => {
+                    println!("unable to get named key skipping withdrawal checks");
+                    return Ok(())
+                }
+            }
         }
     }
 }

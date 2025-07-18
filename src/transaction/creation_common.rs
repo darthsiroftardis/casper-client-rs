@@ -1784,9 +1784,9 @@ pub(super) mod withdraw_bid_all {
         let params = TransactionBuilderParams::WithdrawBid {
             public_key,
             amount,
-            min_bid_override: true,
         };
-        let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+        let mut transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
+        transaction_str_params.min_bid_override = true;
 
         Ok((params, transaction_str_params))
     }
@@ -1828,12 +1828,9 @@ pub(super) mod withdraw_bid {
         let amount_str = transaction_amount::get(matches);
         let amount = transaction_amount::parse_transaction_amount(amount_str)?;
 
-        let min_bid_override = min_bid_override::get(matches);
-
         let params = TransactionBuilderParams::WithdrawBid {
             public_key,
             amount,
-            min_bid_override,
         };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
@@ -2250,6 +2247,9 @@ pub(super) mod invocable_entity_alias {
             .arg(entity_alias_arg::arg())
             .arg(session_entry_point::arg())
             .arg(min_bid_override::arg())
+            .arg(transaction_runtime::arg())
+            .arg(transferred_value::arg())
+            .arg(chunked_args::arg())
     }
 }
 
@@ -2629,6 +2629,8 @@ pub(super) fn build_transaction_str_params(
 
     let maybe_output_path = output::get(matches).unwrap_or_default();
     let initiator_addr = initiator_address::get(matches);
+    let min_bid_override = min_bid_override::get(matches);
+
 
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
@@ -2655,6 +2657,7 @@ pub(super) fn build_transaction_str_params(
                 .unwrap_or_default(),
             session_entry_point,
             chunked_args,
+            min_bid_override
         }
     } else {
         TransactionStrParams {
@@ -2687,18 +2690,12 @@ fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimePar
     let runtime_tag = transaction_runtime::get(matches)
         .cloned()
         .unwrap_or_default();
-    let maybe_transferred_value = transferred_value::get(matches)?;
     let runtime = match runtime_tag {
         TransactionRuntime::VmCasperV1 => {
-            if maybe_transferred_value.is_some() {
-                Err(CliError::InvalidArgument {
-                    context: "transferred_value",
-                    error: "Argument `transferred-value` has no usage in V1 execution engine VM (if you provided no execution engine vm parameter, V1 is the default)".to_string(),
-                })?;
-            }
             TransactionRuntimeParams::VmCasperV1
         }
         TransactionRuntime::VmCasperV2 => {
+            let maybe_transferred_value = transferred_value::get(matches)?;
             if maybe_transferred_value.is_none() {
                 Err(CliError::InvalidArgument {
                     context: "transferred_value",
