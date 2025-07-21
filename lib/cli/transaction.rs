@@ -493,7 +493,7 @@ async fn check_auction_state_for_withdraw(
                         .deserialize_field::<TransactionTarget>(1)
                         .map_err(|err|CliError::FailedToParseTransactionPayloadField(format!("{:?}", err)))?;
                     let registry =
-                        crate::cli::get_system_hash_registry(node_address, verbosity_level).await?;
+                        crate::cli::get_system_hash_registry(node_address, verbosity_level, &encoded_hash).await?;
                     let auction_hash_addr = *registry
                         .get("auction")
                         .ok_or_else(|| CliError::MissingAuctionHash)?;

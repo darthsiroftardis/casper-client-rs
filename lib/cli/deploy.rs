@@ -104,7 +104,15 @@ async fn check_auction_state_for_withdraw(
 ) -> Result<(), CliError> {
     // Best guess on the entry point name
     if entry_point_name == *"withdraw_bid" {
-        let registry = crate::cli::get_system_hash_registry(node_address, verbosity_level).await?;
+        let state_root_hash = *get_block("", node_address, 0, "")
+            .await?
+            .result
+            .block_with_signatures
+            .ok_or_else(|| CliError::FailedToGetStateRootHash)?
+            .block
+            .state_root_hash();
+        let encoded_hash = base16::encode_lower(&state_root_hash);
+        let registry = crate::cli::get_system_hash_registry(node_address, verbosity_level, &encoded_hash).await?;
         let auction_hash_addr = *registry
             .get("auction")
             .ok_or_else(|| CliError::MissingAuctionHash)?;
@@ -119,7 +127,7 @@ async fn check_auction_state_for_withdraw(
                 node_address,
                 verbosity_level,
                 "",
-                "",
+                &encoded_hash,
                 &key.to_formatted_string(),
                 "",
             )
