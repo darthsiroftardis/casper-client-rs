@@ -630,7 +630,6 @@ async fn check_auction_state_for_withdraw(
                 }
                 _ => false,
             };
-            println!("do amount checks {do_amount_checks}");
             if do_amount_checks {
                 let args = transaction_v1
                     .payload()
