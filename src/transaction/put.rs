@@ -201,8 +201,36 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
             .result
             .chainspec_bytes;
 
-        let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes()).unwrap();
-        let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str).unwrap();
+        let chainspec_as_str = match std::str::from_utf8(chainspec_bytes.chainspec_bytes()) {
+            Ok(chainspec_as_str) => chainspec_as_str,
+            Err(_) => {
+                println!("Unable to decode chainspec bytes, skipping withdraw bid checks");
+                return casper_client::cli::put_transaction(
+                    rpc_id,
+                    node_address,
+                    verbosity_level,
+                    transaction_builder_params,
+                    transaction_str_params,
+                )
+                    .await
+                    .map(Success::from)
+            }
+        };
+        let toml_chainspec: TomlChainspec = match toml::from_str(chainspec_as_str) {
+            Ok(toml_chainspec) => toml_chainspec,
+            Err(_) => {
+                println!("Unable to deserialize chainspec skipping withdraw bid checks");
+                return casper_client::cli::put_transaction(
+                    rpc_id,
+                    node_address,
+                    verbosity_level,
+                    transaction_builder_params,
+                    transaction_str_params,
+                )
+                    .await
+                    .map(Success::from)
+            }
+        };
 
         let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
