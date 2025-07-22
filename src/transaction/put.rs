@@ -212,8 +212,8 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
                     transaction_builder_params,
                     transaction_str_params,
                 )
-                    .await
-                    .map(Success::from)
+                .await
+                .map(Success::from);
             }
         };
         let toml_chainspec: TomlChainspec = match toml::from_str(chainspec_as_str) {
@@ -227,8 +227,8 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
                     transaction_builder_params,
                     transaction_str_params,
                 )
-                    .await
-                    .map(Success::from)
+                .await
+                .map(Success::from);
             }
         };
 
