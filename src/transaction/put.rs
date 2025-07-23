@@ -204,7 +204,7 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         let chainspec_as_str = match std::str::from_utf8(chainspec_bytes.chainspec_bytes()) {
             Ok(chainspec_as_str) => chainspec_as_str,
             Err(_) => {
-                return if min_bid_override {
+                return if *min_bid_override {
                     println!("Unable to decode chainspec bytes, skipping withdraw bid checks");
                     casper_client::cli::put_transaction(
                         rpc_id,
@@ -223,7 +223,7 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         let toml_chainspec: TomlChainspec = match toml::from_str(chainspec_as_str) {
             Ok(toml_chainspec) => toml_chainspec,
             Err(_) => {
-                return if min_bid_override {
+                return if *min_bid_override {
                     println!("Unable to deserialize chainspec skipping withdraw bid checks");
                     casper_client::cli::put_transaction(
                         rpc_id,
