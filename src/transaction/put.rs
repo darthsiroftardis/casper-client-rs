@@ -204,31 +204,39 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         let chainspec_as_str = match std::str::from_utf8(chainspec_bytes.chainspec_bytes()) {
             Ok(chainspec_as_str) => chainspec_as_str,
             Err(_) => {
-                println!("Unable to decode chainspec bytes, skipping withdraw bid checks");
-                return casper_client::cli::put_transaction(
-                    rpc_id,
-                    node_address,
-                    verbosity_level,
-                    transaction_builder_params,
-                    transaction_str_params,
-                )
-                .await
-                .map(Success::from);
+                return if min_bid_override {
+                    println!("Unable to decode chainspec bytes, skipping withdraw bid checks");
+                    casper_client::cli::put_transaction(
+                        rpc_id,
+                        node_address,
+                        verbosity_level,
+                        transaction_builder_params,
+                        transaction_str_params,
+                    )
+                    .await
+                    .map(Success::from)
+                } else {
+                    Err(CliError::FailedToParseChainspecBytes)
+                }
             }
         };
         let toml_chainspec: TomlChainspec = match toml::from_str(chainspec_as_str) {
             Ok(toml_chainspec) => toml_chainspec,
             Err(_) => {
-                println!("Unable to deserialize chainspec skipping withdraw bid checks");
-                return casper_client::cli::put_transaction(
-                    rpc_id,
-                    node_address,
-                    verbosity_level,
-                    transaction_builder_params,
-                    transaction_str_params,
-                )
-                .await
-                .map(Success::from);
+                return if min_bid_override {
+                    println!("Unable to deserialize chainspec skipping withdraw bid checks");
+                    casper_client::cli::put_transaction(
+                        rpc_id,
+                        node_address,
+                        verbosity_level,
+                        transaction_builder_params,
+                        transaction_str_params,
+                    )
+                    .await
+                    .map(Success::from)
+                } else {
+                    Err(CliError::FailedToParseChainspecBytes)
+                }
             }
         };
 
