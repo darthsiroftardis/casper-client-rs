@@ -196,13 +196,27 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
         min_bid_override,
     } = &transaction_builder_params
     {
+        if *min_bid_override {
+            return casper_client::cli::put_transaction(
+                rpc_id,
+                node_address,
+                verbosity_level,
+                transaction_builder_params,
+                transaction_str_params,
+            )
+            .await
+            .map(Success::from);
+        }
+
         let chainspec_bytes = casper_client::cli::get_chainspec("", node_address, verbosity_level)
             .await?
             .result
             .chainspec_bytes;
 
-        let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes()).unwrap();
-        let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str).unwrap();
+        let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes())
+            .map_err(|_| CliError::FailedToParseChainspecBytes)?;
+        let toml_chainspec: TomlChainspec =
+            toml::from_str(chainspec_as_str).map_err(|_| CliError::FailedToParseChainspecBytes)?;
 
         let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
