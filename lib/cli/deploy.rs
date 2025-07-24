@@ -65,8 +65,10 @@ pub(crate) async fn do_withdraw_amount_checks(
         .result
         .chainspec_bytes;
 
-    let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes()).unwrap();
-    let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str).unwrap();
+    let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes())
+        .map_err(|_| Err(CliError::FailedToParseChainspecBytes))?;
+    let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str)
+        .map_err(|_| Err(CliError::FailedToParseChainspecBytes))?;
 
     let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
