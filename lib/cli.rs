@@ -44,7 +44,7 @@ mod transaction_v1_builder;
 use serde::Serialize;
 
 #[cfg(doc)]
-use casper_types::{account::AccountHash, Key};
+use casper_types::account::AccountHash;
 
 use casper_types::{CLValue, Digest, Key, SystemHashRegistry, URef};
 
