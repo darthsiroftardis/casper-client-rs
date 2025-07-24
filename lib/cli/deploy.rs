@@ -65,7 +65,6 @@ pub(crate) async fn do_withdraw_amount_checks(
         .result
         .chainspec_bytes;
 
-
     let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes())
         .map_err(|_| CliError::FailedToParseChainspecBytes)?;
     let toml_chainspec: TomlChainspec =
