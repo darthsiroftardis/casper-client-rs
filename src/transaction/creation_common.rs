@@ -1781,10 +1781,7 @@ pub(super) mod withdraw_bid_all {
         let public_key_str = public_key::get(matches)?;
         let public_key = public_key::parse_public_key(&public_key_str)?;
 
-        let params = TransactionBuilderParams::WithdrawBid {
-            public_key,
-            amount,
-        };
+        let params = TransactionBuilderParams::WithdrawBid { public_key, amount };
         let mut transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
         transaction_str_params.min_bid_override = true;
 
@@ -1828,10 +1825,7 @@ pub(super) mod withdraw_bid {
         let amount_str = transaction_amount::get(matches);
         let amount = transaction_amount::parse_transaction_amount(amount_str)?;
 
-        let params = TransactionBuilderParams::WithdrawBid {
-            public_key,
-            amount,
-        };
+        let params = TransactionBuilderParams::WithdrawBid { public_key, amount };
         let transaction_str_params = build_transaction_str_params(matches, ACCEPT_SESSION_ARGS);
 
         Ok((params, transaction_str_params))
@@ -2631,7 +2625,6 @@ pub(super) fn build_transaction_str_params(
     let initiator_addr = initiator_address::get(matches);
     let min_bid_override = min_bid_override::get(matches);
 
-
     if obtain_session_args {
         let session_args_simple = arg_simple::session::get(matches);
         let session_args_json = args_json::session::get(matches);
@@ -2657,7 +2650,7 @@ pub(super) fn build_transaction_str_params(
                 .unwrap_or_default(),
             session_entry_point,
             chunked_args,
-            min_bid_override
+            min_bid_override,
         }
     } else {
         TransactionStrParams {
@@ -2691,9 +2684,7 @@ fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimePar
         .cloned()
         .unwrap_or_default();
     let runtime = match runtime_tag {
-        TransactionRuntime::VmCasperV1 => {
-            TransactionRuntimeParams::VmCasperV1
-        }
+        TransactionRuntime::VmCasperV1 => TransactionRuntimeParams::VmCasperV1,
         TransactionRuntime::VmCasperV2 => {
             let maybe_transferred_value = transferred_value::get(matches)?;
             if maybe_transferred_value.is_none() {

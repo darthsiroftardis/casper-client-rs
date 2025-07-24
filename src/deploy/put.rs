@@ -93,7 +93,6 @@ impl ClientCommand for PutDeploy {
                 },
                 session_str_params,
                 payment_str_params,
-
             )
             .await
             .map(Success::from)

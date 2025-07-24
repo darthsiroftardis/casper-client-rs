@@ -1,4 +1,4 @@
-use crate::cli::deploy::{do_withdraw_amount_checks};
+use crate::cli::deploy::do_withdraw_amount_checks;
 use crate::cli::{get_block, query_global_state};
 #[cfg(feature = "std-fs-io")]
 use crate::read_transaction_file;
@@ -13,8 +13,8 @@ use crate::{
     SuccessResponse,
 };
 use casper_types::{
-    Digest, InitiatorAddr, Key, PublicKey, SecretKey, Transaction,
-    TransactionArgs, TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
+    Digest, InitiatorAddr, Key, PublicKey, SecretKey, Transaction, TransactionArgs,
+    TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
     TransactionTarget, U512,
 };
 
@@ -480,7 +480,9 @@ async fn check_auction_state_for_withdraw(
         Transaction::V1(transaction_v1) => {
             let entry_point = transaction_v1
                 .deserialize_field::<TransactionEntryPoint>(2)
-                .map_err(|err| CliError::FailedToParseTransactionPayloadField(format!("{:?}", err)))?;
+                .map_err(|err| {
+                    CliError::FailedToParseTransactionPayloadField(format!("{:?}", err))
+                })?;
             let do_amount_checks = match entry_point {
                 TransactionEntryPoint::WithdrawBid => true,
                 TransactionEntryPoint::Custom(name) => {
@@ -491,9 +493,15 @@ async fn check_auction_state_for_withdraw(
                     let transaction_invocation_target = transaction_v1
                         .payload()
                         .deserialize_field::<TransactionTarget>(1)
-                        .map_err(|err|CliError::FailedToParseTransactionPayloadField(format!("{:?}", err)))?;
-                    let registry =
-                        crate::cli::get_system_hash_registry(node_address, verbosity_level, &encoded_hash).await?;
+                        .map_err(|err| {
+                            CliError::FailedToParseTransactionPayloadField(format!("{:?}", err))
+                        })?;
+                    let registry = crate::cli::get_system_hash_registry(
+                        node_address,
+                        verbosity_level,
+                        &encoded_hash,
+                    )
+                    .await?;
                     let auction_hash_addr = *registry
                         .get("auction")
                         .ok_or_else(|| CliError::MissingAuctionHash)?;
@@ -517,11 +525,10 @@ async fn check_auction_state_for_withdraw(
                                 )
                                 .await?
                                 .result
-                                .stored_value.into_account()
-                                    .ok_or_else(|| CliError::UnexpectedStoredValue)?;
-                                let key = account
-                                    .named_keys()
-                                    .get(&name);
+                                .stored_value
+                                .into_account()
+                                .ok_or_else(|| CliError::UnexpectedStoredValue)?;
+                                let key = account.named_keys().get(&name);
                                 match key {
                                     Some(key) => match *key {
                                         Key::Hash(addr) => addr == auction_hash_addr,
@@ -529,7 +536,7 @@ async fn check_auction_state_for_withdraw(
                                             addr.value() == auction_hash_addr
                                         }
                                         _ => false,
-                                    }
+                                    },
                                     None => false,
                                 }
                             }
@@ -565,60 +572,57 @@ async fn check_auction_state_for_withdraw(
                                     &base_key.to_formatted_string(),
                                     "",
                                 )
-                                    .await?
-                                    .result
-                                    .stored_value.into_account()
-                                    .ok_or_else(|| CliError::UnexpectedStoredValue)?;
-                                let key = account
-                                    .named_keys()
-                                    .get(&name);
+                                .await?
+                                .result
+                                .stored_value
+                                .into_account()
+                                .ok_or_else(|| CliError::UnexpectedStoredValue)?;
+                                let key = account.named_keys().get(&name);
                                 match key {
-                                    Some(key) => {
-                                        match *key {
-                                            Key::Hash(addr) => {
-                                                let key = Key::Hash(auction_hash_addr);
-                                                let package_addr = query_global_state(
-                                                    "",
-                                                    node_address,
-                                                    verbosity_level,
-                                                    "",
-                                                    &encoded_hash,
-                                                    &key.to_formatted_string(),
-                                                    "",
-                                                )
-                                                    .await?
-                                                    .result
-                                                    .stored_value
-                                                    .as_contract()
-                                                    .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?
-                                                    .contract_package_hash()
-                                                    .value();
-                                                addr == package_addr
-                                            }
-                                            Key::SmartContract(addr) => {
-                                                let key = Key::Hash(auction_hash_addr);
-                                                let package_addr = query_global_state(
-                                                    "",
-                                                    node_address,
-                                                    verbosity_level,
-                                                    "",
-                                                    &encoded_hash,
-                                                    &key.to_formatted_string(),
-                                                    "",
-                                                )
-                                                    .await?
-                                                    .result
-                                                    .stored_value
-                                                    .as_contract()
-                                                    .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?
-                                                    .contract_package_hash()
-                                                    .value();
-                                                addr == package_addr
-                                            }
-                                            _ => false,
+                                    Some(key) => match *key {
+                                        Key::Hash(addr) => {
+                                            let key = Key::Hash(auction_hash_addr);
+                                            let package_addr = query_global_state(
+                                                "",
+                                                node_address,
+                                                verbosity_level,
+                                                "",
+                                                &encoded_hash,
+                                                &key.to_formatted_string(),
+                                                "",
+                                            )
+                                            .await?
+                                            .result
+                                            .stored_value
+                                            .as_contract()
+                                            .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?
+                                            .contract_package_hash()
+                                            .value();
+                                            addr == package_addr
                                         }
-                                    }
-                                    None => false
+                                        Key::SmartContract(addr) => {
+                                            let key = Key::Hash(auction_hash_addr);
+                                            let package_addr = query_global_state(
+                                                "",
+                                                node_address,
+                                                verbosity_level,
+                                                "",
+                                                &encoded_hash,
+                                                &key.to_formatted_string(),
+                                                "",
+                                            )
+                                            .await?
+                                            .result
+                                            .stored_value
+                                            .as_contract()
+                                            .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?
+                                            .contract_package_hash()
+                                            .value();
+                                            addr == package_addr
+                                        }
+                                        _ => false,
+                                    },
+                                    None => false,
                                 }
                             }
                         }
@@ -634,7 +638,9 @@ async fn check_auction_state_for_withdraw(
                 let args = transaction_v1
                     .payload()
                     .deserialize_field::<TransactionArgs>(0)
-                    .map_err(|err| CliError::FailedToParseTransactionPayloadField(format!("{:?}", err)))?;
+                    .map_err(|err| {
+                        CliError::FailedToParseTransactionPayloadField(format!("{:?}", err))
+                    })?;
                 if let Some(named_args) = args.into_named() {
                     let amount = named_args
                         .get("amount")
@@ -652,7 +658,8 @@ async fn check_auction_state_for_withdraw(
                         .to_t::<PublicKey>()
                         .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
 
-                    do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override).await?
+                    do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override)
+                        .await?
                 }
             } else {
                 println!("Skipping amount checks for withdraw bid")

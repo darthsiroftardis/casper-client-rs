@@ -11,7 +11,7 @@ use casper_types::{
 use casper_types::{CLValueError, KeyFromStrError, UIntParseError, URefFromStrError};
 pub use uint::FromDecStrErr;
 
-use crate::cli::{ JsonArgsError};
+use crate::cli::JsonArgsError;
 #[cfg(doc)]
 use crate::rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier};
 
@@ -229,10 +229,9 @@ pub enum CliError {
     #[error("Failed to parse the transaction target: {0}")]
     FailedToParseTransactionPayloadField(String),
 
-
     /// Unexpected Stored value
     #[error("unexpected stored value")]
-    UnexpectedStoredValue
+    UnexpectedStoredValue,
 }
 
 impl From<CLValueError> for CliError {

@@ -67,8 +67,8 @@ pub(crate) async fn do_withdraw_amount_checks(
 
     let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes())
         .map_err(|_| Err(CliError::FailedToParseChainspecBytes))?;
-    let toml_chainspec: TomlChainspec = toml::from_str(chainspec_as_str)
-        .map_err(|_| Err(CliError::FailedToParseChainspecBytes))?;
+    let toml_chainspec: TomlChainspec =
+        toml::from_str(chainspec_as_str).map_err(|_| Err(CliError::FailedToParseChainspecBytes))?;
 
     let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
 
@@ -114,7 +114,9 @@ async fn check_auction_state_for_withdraw(
             .block
             .state_root_hash();
         let encoded_hash = base16::encode_lower(&state_root_hash);
-        let registry = crate::cli::get_system_hash_registry(node_address, verbosity_level, &encoded_hash).await?;
+        let registry =
+            crate::cli::get_system_hash_registry(node_address, verbosity_level, &encoded_hash)
+                .await?;
         let auction_hash_addr = *registry
             .get("auction")
             .ok_or_else(|| CliError::MissingAuctionHash)?;
@@ -154,12 +156,17 @@ async fn check_auction_state_for_withdraw(
             .ok_or_else(|| CliError::InvalidCLValue("count not parse amount".to_string()))?
             .to_t::<PublicKey>()
             .map_err(|err| CliError::InvalidCLValue(err.to_string()))?;
-        return do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override).await;
+        return do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override)
+            .await;
     }
     Ok(())
 }
 
-async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &Deploy) -> Result<(), CliError> {
+async fn do_deploy_checks(
+    node_address: &str,
+    min_bid_override: bool,
+    deploy: &Deploy,
+) -> Result<(), CliError> {
     let session = deploy.session();
     let state_root_hash = *get_block("", node_address, 0, "")
         .await?
@@ -170,17 +177,22 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
         .state_root_hash();
     let encoded_hash = base16::encode_lower(&state_root_hash);
     match session {
-        ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => {
-            Ok(())
-        }
+        ExecutableDeployItem::ModuleBytes { .. } | ExecutableDeployItem::Transfer { .. } => Ok(()),
         ExecutableDeployItem::StoredContractByHash {
             entry_point,
             hash,
             args,
         } => {
             let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
-                .await
+            check_auction_state_for_withdraw(
+                node_address,
+                0,
+                hash_addr,
+                entry_point.clone(),
+                args,
+                min_bid_override,
+            )
+            .await
         }
         ExecutableDeployItem::StoredContractByName {
             name,
@@ -195,16 +207,14 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                 "",
                 &encoded_hash,
                 &account.to_formatted_string(),
-                ""
+                "",
             )
             .await?
             .result
             .stored_value
             .into_account()
             .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = cl_value
-                .named_keys()
-                .get(name);
+            let key = cl_value.named_keys().get(name);
             match key {
                 Some(key) => {
                     let hash_addr = match *key {
@@ -212,8 +222,15 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                         Key::SmartContract(addr) => addr,
                         _ => return Ok(()),
                     };
-                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
-                        .await
+                    check_auction_state_for_withdraw(
+                        node_address,
+                        0,
+                        hash_addr,
+                        entry_point.clone(),
+                        args,
+                        min_bid_override,
+                    )
+                    .await
                 }
                 None => {
                     println!("unable to get named key skipping withdrawal checks");
@@ -228,8 +245,15 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
             ..
         } => {
             let hash_addr = hash.value();
-            check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
-                .await
+            check_auction_state_for_withdraw(
+                node_address,
+                0,
+                hash_addr,
+                entry_point.clone(),
+                args,
+                min_bid_override,
+            )
+            .await
         }
         ExecutableDeployItem::StoredVersionedContractByName {
             name,
@@ -250,11 +274,9 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
             .await?
             .result
             .stored_value
-                .into_account()
-                .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
-            let key = account
-                .named_keys()
-                .get(name);
+            .into_account()
+            .ok_or_else(|| CliError::InvalidCLValue("unable to parse as cl _value".to_string()))?;
+            let key = account.named_keys().get(name);
             match key {
                 Some(key) => {
                     let hash_addr = match *key {
@@ -262,8 +284,15 @@ async fn do_deploy_checks(node_address: &str, min_bid_override: bool, deploy: &D
                         Key::SmartContract(addr) => addr,
                         _ => return Ok(()),
                     };
-                    check_auction_state_for_withdraw(node_address, 0, hash_addr, entry_point.clone(), args, min_bid_override)
-                        .await
+                    check_auction_state_for_withdraw(
+                        node_address,
+                        0,
+                        hash_addr,
+                        entry_point.clone(),
+                        args,
+                        min_bid_override,
+                    )
+                    .await
                 }
                 None => {
                     println!("unable to get named key skipping withdrawal checks");
