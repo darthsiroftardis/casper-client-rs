@@ -758,6 +758,7 @@ pub(super) fn apply_common_creation_options(
         .arg(gas_price_tolerance::arg())
         .arg(receipt::arg())
         .arg(standard_payment::arg())
+        .arg(min_bid_override::arg())
         .group(
             ArgGroup::new("Classic payment")
                 .arg(payment_amount::ARG_NAME)
