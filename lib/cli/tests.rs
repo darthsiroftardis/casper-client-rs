@@ -553,6 +553,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::AddBid {
@@ -630,6 +631,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Delegate {
@@ -702,6 +704,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let transaction_string_params = transaction_str_params;
 
@@ -753,14 +756,12 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let transaction_string_params = transaction_str_params;
 
-        let transaction_builder_params = TransactionBuilderParams::WithdrawBid {
-            public_key,
-            amount,
-            min_bid_override: true,
-        };
+        let transaction_builder_params =
+            TransactionBuilderParams::WithdrawBid { public_key, amount };
 
         let transaction =
             create_transaction(transaction_builder_params, transaction_string_params, true);
@@ -821,6 +822,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Undelegate {
@@ -901,6 +903,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Redelegate {
@@ -985,6 +988,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::ChangeBidPublicKey {
@@ -1063,6 +1067,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::AddReservations { reservations };
@@ -1121,6 +1126,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::CancelReservations {
@@ -1187,6 +1193,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let params = TransactionRuntimeParams::VmCasperV1;
@@ -1240,6 +1247,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let params = TransactionRuntimeParams::VmCasperV1;
@@ -1299,6 +1307,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let params = TransactionRuntimeParams::VmCasperV1;
         let transaction_builder_params = TransactionBuilderParams::Package {
@@ -1358,6 +1367,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let params = TransactionRuntimeParams::VmCasperV1;
@@ -1413,6 +1423,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let params = TransactionRuntimeParams::VmCasperV1;
@@ -1476,6 +1487,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
 
         let transaction_builder_params = TransactionBuilderParams::Transfer {
@@ -1547,6 +1559,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let transaction_builder_params = TransactionBuilderParams::Transfer {
             maybe_source: Default::default(),
@@ -1589,6 +1602,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),
@@ -1627,6 +1641,7 @@ mod transaction {
             transferred_value: "0",
             session_entry_point: None,
             chunked_args: None,
+            min_bid_override: false,
         };
         let transaction_builder_params = TransactionBuilderParams::AddBid {
             public_key: PublicKey::from_hex(SAMPLE_ACCOUNT).unwrap(),

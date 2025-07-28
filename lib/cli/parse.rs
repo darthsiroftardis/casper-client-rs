@@ -104,6 +104,7 @@ pub(crate) mod arg_simple {
     pub(crate) mod session {
         use super::*;
 
+        /// Parse session arguments into runtime args.
         pub fn parse(values: &[&str]) -> Result<Option<RuntimeArgs>, CliError> {
             Ok(if values.is_empty() {
                 None
@@ -141,6 +142,7 @@ pub(crate) mod args_json {
     pub mod session {
         use super::*;
 
+        /// Parse session arguments into runtime args.
         pub fn parse(json_str: &str) -> Result<Option<RuntimeArgs>, CliError> {
             get(json_str)
         }

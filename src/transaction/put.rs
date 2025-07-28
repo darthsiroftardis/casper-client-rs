@@ -2,10 +2,10 @@ use async_trait::async_trait;
 use clap::{ArgMatches, Command};
 use serde::{Deserialize, Serialize};
 
-use casper_client::cli::{CliError, TransactionBuilderParams};
+use casper_client::cli::CliError;
 use casper_types::{
     ActivationPoint, CoreConfig, HighwayConfig, ProtocolVersion, StorageCosts, SystemConfig,
-    TransactionConfig, VacancyConfig, WasmConfig, U512,
+    TransactionConfig, VacancyConfig, WasmConfig,
 };
 
 use super::creation_common::{
@@ -189,59 +189,6 @@ async fn put_withdraw_bid_transaction(matches: &ArgMatches) -> Result<Success, C
     let verbosity_level = common::verbose::get(matches);
 
     let (transaction_builder_params, transaction_str_params) = withdraw_bid::run(matches)?;
-
-    if let TransactionBuilderParams::WithdrawBid {
-        public_key,
-        amount,
-        min_bid_override,
-    } = &transaction_builder_params
-    {
-        if *min_bid_override {
-            return casper_client::cli::put_transaction(
-                rpc_id,
-                node_address,
-                verbosity_level,
-                transaction_builder_params,
-                transaction_str_params,
-            )
-            .await
-            .map(Success::from);
-        }
-
-        let chainspec_bytes = casper_client::cli::get_chainspec("", node_address, verbosity_level)
-            .await?
-            .result
-            .chainspec_bytes;
-
-        let chainspec_as_str = std::str::from_utf8(chainspec_bytes.chainspec_bytes())
-            .map_err(|_| CliError::FailedToParseChainspecBytes)?;
-        let toml_chainspec: TomlChainspec =
-            toml::from_str(chainspec_as_str).map_err(|_| CliError::FailedToParseChainspecBytes)?;
-
-        let minimum_validator_bid = toml_chainspec.core.minimum_bid_amount;
-
-        match casper_client::cli::get_auction_info("", node_address, verbosity_level, "")
-            .await?
-            .result
-            .auction_state
-            .bids()
-            .find(|(bid_key, _bid)| **bid_key == *public_key)
-        {
-            Some((_, bid)) => {
-                let staked_amount = *bid.staked_amount();
-                let remainder = staked_amount.saturating_sub(*amount);
-                if remainder < U512::from(minimum_validator_bid) {
-                    if !min_bid_override {
-                        return Err(CliError::ReducedStakeBelowMinAmount);
-                    } else {
-                        println!("[WARN] Execution of this withdraw bid will result in unbonding of all stake")
-                    }
-                }
-            }
-            None => return Err(CliError::FailedToGetAuctionState),
-        };
-    }
-
     casper_client::cli::put_transaction(
         rpc_id,
         node_address,

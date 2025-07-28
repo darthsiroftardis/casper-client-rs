@@ -77,4 +77,6 @@ pub struct TransactionStrParams<'a> {
     pub session_entry_point: Option<&'a str>,
     /// Chunked arguments for the transaction.
     pub chunked_args: Option<Vec<u8>>,
+    /// Whether to override the minimum bid amount checks.
+    pub min_bid_override: bool,
 }

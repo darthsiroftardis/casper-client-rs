@@ -44,9 +44,9 @@ mod transaction_v1_builder;
 use serde::Serialize;
 
 #[cfg(doc)]
-use casper_types::{account::AccountHash, Key};
+use casper_types::account::AccountHash;
 
-use casper_types::{Digest, URef};
+use casper_types::{CLValue, Digest, Key, SystemHashRegistry, URef};
 
 use crate::{
     rpcs::{
@@ -71,8 +71,9 @@ use crate::{Account, Block, Error, StoredValue, Transfer};
 use casper_types::PublicKey;
 #[cfg(feature = "std-fs-io")]
 pub use deploy::{
-    make_deploy, make_transfer, put_deploy, send_deploy_file, sign_deploy_file,
-    speculative_put_deploy, speculative_send_deploy_file, speculative_transfer, transfer,
+    make_deploy, make_transfer, put_deploy, put_deploy_with_min_bid_override, send_deploy_file,
+    sign_deploy_file, speculative_put_deploy, speculative_send_deploy_file, speculative_transfer,
+    transfer,
 };
 pub use deploy_builder::{DeployBuilder, DeployBuilderError};
 pub use deploy_str_params::DeployStrParams;
@@ -82,10 +83,12 @@ pub(crate) use fields_container::{FieldsContainer, FieldsContainerError};
 pub use json_args::{
     help as json_args_help, Error as JsonArgsError, ErrorDetails as JsonArgsErrorDetails, JsonArg,
 };
+pub use parse::arg_simple::session::parse as arg_simple_session_parse;
+pub use parse::args_json::session::parse as arg_json_session_parse;
 pub use payment_str_params::PaymentStrParams;
 pub use session_str_params::SessionStrParams;
 pub use simple_args::{help as simple_args_help, insert_arg};
-pub use transaction::{make_transaction, put_transaction};
+pub use transaction::{get_maybe_secret_key, make_transaction, put_transaction};
 #[cfg(feature = "std-fs-io")]
 pub use transaction::{
     send_transaction_file, sign_transaction_file, speculative_send_transaction_file,
@@ -510,6 +513,32 @@ pub async fn get_auction_info(
     crate::get_auction_info(rpc_id, node_address, verbosity, maybe_block_id)
         .await
         .map_err(CliError::from)
+}
+
+/// Retrieve the system hash registry
+pub async fn get_system_hash_registry(
+    node_address: &str,
+    verbosity_level: u64,
+    state_root_hash: &str,
+) -> Result<SystemHashRegistry, CliError> {
+    let key = Key::SystemEntityRegistry.to_formatted_string();
+    let response = query_global_state(
+        "",
+        node_address,
+        verbosity_level,
+        "",
+        state_root_hash,
+        &key,
+        "",
+    )
+    .await?
+    .result
+    .stored_value
+    .into_cl_value()
+    .ok_or_else(|| CliError::FailedToGetSystemHashRegistry)?;
+
+    CLValue::to_t::<SystemHashRegistry>(&response)
+        .map_err(|err| CliError::InvalidCLValue(err.to_string()))
 }
 
 /// Retrieves the status changes of the active validators on the network.

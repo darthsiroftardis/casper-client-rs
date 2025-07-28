@@ -30,7 +30,8 @@ impl ClientCommand for PutDeploy {
             .arg(common::verbose::arg(DisplayOrder::Verbose as usize))
             .arg(common::rpc_id::arg(DisplayOrder::RpcId as usize))
             .arg(creation_common::speculative_exec::arg())
-            .arg(creation_common::gas_price::arg());
+            .arg(creation_common::gas_price::arg())
+            .arg(creation_common::min_bid_override::arg());
         let subcommand = creation_common::apply_common_session_options(subcommand);
         let subcommand = creation_common::apply_common_payment_options(subcommand, None);
         creation_common::apply_common_creation_options(subcommand, true, true)
@@ -56,6 +57,7 @@ impl ClientCommand for PutDeploy {
         let gas_price = creation_common::gas_price::get(matches);
         let session_str_params = creation_common::session_str_params(matches);
         let payment_str_params = creation_common::payment_str_params(matches);
+        let min_bid_override = creation_common::min_bid_override::get(matches);
 
         if is_speculative_exec {
             casper_client::cli::speculative_put_deploy(
@@ -76,10 +78,11 @@ impl ClientCommand for PutDeploy {
             .await
             .map(Success::from)
         } else {
-            casper_client::cli::put_deploy(
+            casper_client::cli::put_deploy_with_min_bid_override(
                 maybe_rpc_id,
                 node_address,
                 verbosity_level,
+                min_bid_override,
                 DeployStrParams {
                     secret_key,
                     timestamp,

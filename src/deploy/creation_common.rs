@@ -51,6 +51,7 @@ pub(super) enum DisplayOrder {
     PaymentPackageName,
     PaymentEntryPoint,
     PaymentVersion,
+    MinBidOverride,
 }
 
 /// Handles providing the arg for and executing the show-simple-arg-examples option.
@@ -443,6 +444,27 @@ pub(super) mod gas_price {
             .get_one::<String>(ARG_NAME)
             .map(String::as_str)
             .unwrap_or_default()
+    }
+}
+
+pub(super) mod min_bid_override {
+    use super::*;
+
+    const ARG_NAME: &str = "min-bid-override";
+
+    const ARG_HELP: &str = "Flag to override the min bid staking amount check";
+
+    pub fn arg() -> Arg {
+        Arg::new(ARG_NAME)
+            .long(ARG_NAME)
+            .required(false)
+            .action(ArgAction::SetTrue)
+            .help(ARG_HELP)
+            .display_order(DisplayOrder::MinBidOverride as usize)
+    }
+
+    pub fn get(matches: &ArgMatches) -> bool {
+        matches.get_flag(ARG_NAME)
     }
 }
 

@@ -212,6 +212,26 @@ pub enum CliError {
     /// Missing major version.
     #[error("Major version is missing when specifying entity version")]
     MissingMajorVersion,
+
+    /// Failed to get system hash registry
+    #[error("Failed to retrieve system hash registry")]
+    FailedToGetSystemHashRegistry,
+
+    /// Failed to get auction hash.
+    #[error("Missing auction hash")]
+    MissingAuctionHash,
+
+    /// Failed to get state root hash
+    #[error("Failed to retrieve state root hash")]
+    FailedToGetStateRootHash,
+
+    /// Failed to parse the transaction target.
+    #[error("Failed to parse the transaction target: {0}")]
+    FailedToParseTransactionPayloadField(String),
+
+    /// Unexpected Stored value
+    #[error("unexpected stored value")]
+    UnexpectedStoredValue,
 }
 
 impl From<CLValueError> for CliError {
