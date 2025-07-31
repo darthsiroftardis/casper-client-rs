@@ -343,7 +343,7 @@ pub async fn put_deploy_with_min_bid_override(
     let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
     if let Err(err) = do_deploy_checks(node_address, min_bid_override, &deploy).await {
         if !min_bid_override {
-            return Err(err)
+            return Err(err);
         } else {
             println!("[WARN]: Skipping withdraw bid amount checks: {}", err)
         }

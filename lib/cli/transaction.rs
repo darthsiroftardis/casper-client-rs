@@ -157,11 +157,13 @@ pub async fn put_transaction(
     let verbosity_level = parse::verbosity(verbosity_level);
     let min_bid_override = transaction_params.min_bid_override;
     let transaction = create_transaction(builder_params, transaction_params, false)?;
-    if let Err(err) = check_auction_state_for_withdraw(node_address, 0, min_bid_override, &transaction).await {
+    if let Err(err) =
+        check_auction_state_for_withdraw(node_address, 0, min_bid_override, &transaction).await
+    {
         if !min_bid_override {
-            return Err(err)
+            return Err(err);
         } else {
-            println!("[WARN] Skipping withdraw amount checks {}",err)
+            println!("[WARN] Skipping withdraw amount checks {}", err)
         }
     };
     put_transaction_rpc_handler(rpc_id, node_address, verbosity_level, transaction)
