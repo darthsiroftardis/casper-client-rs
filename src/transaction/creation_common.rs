@@ -1835,7 +1835,6 @@ pub(super) mod withdraw_bid {
     fn add_args(withdraw_bid_subcommand: Command) -> Command {
         withdraw_bid_subcommand
             .arg(public_key::arg(DisplayOrder::PublicKey as usize))
-            .arg(min_bid_override::arg())
             .arg(transaction_amount::arg())
     }
 }
@@ -2192,7 +2191,6 @@ pub(super) mod invocable_entity {
             .arg(transaction_runtime::arg())
             .arg(transferred_value::arg())
             .arg(chunked_args::arg())
-            .arg(min_bid_override::arg())
     }
 }
 
@@ -2241,7 +2239,6 @@ pub(super) mod invocable_entity_alias {
         invocable_entity_alias_subcommand
             .arg(entity_alias_arg::arg())
             .arg(session_entry_point::arg())
-            .arg(min_bid_override::arg())
             .arg(transaction_runtime::arg())
             .arg(transferred_value::arg())
             .arg(chunked_args::arg())
@@ -2312,7 +2309,6 @@ pub(super) mod package {
             .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
-            .arg(min_bid_override::arg())
     }
 }
 
@@ -2373,7 +2369,6 @@ pub(super) mod package_alias {
             .arg(chunked_args::arg())
             .arg(major_version::arg())
             .arg(session_entry_point::arg())
-            .arg(min_bid_override::arg())
     }
 }
 
@@ -2667,6 +2662,7 @@ pub(super) fn build_transaction_str_params(
             additional_computation_factor,
             receipt,
             standard_payment,
+            min_bid_override,
             ..Default::default()
         }
     }
@@ -2705,12 +2701,16 @@ fn get_transaction_runtime(matches: &ArgMatches) -> Result<TransactionRuntimePar
 
 #[cfg(test)]
 mod tests {
-    use super::is_install_upgrade;
+    use super::{is_install_upgrade, min_bid_override};
     use clap::Command;
 
     // Helper function to build a command with `is_install_upgrade` argument
     fn build_app() -> Command {
         Command::new("put-transaction session").arg(is_install_upgrade::arg(1))
+    }
+
+    fn build_withdraw() -> Command {
+        Command::new("put-transaction withdraw-bid").arg(min_bid_override::arg())
     }
 
     #[test]
@@ -2733,5 +2733,16 @@ mod tests {
 
         // Assert that `get` returns false when the flag is absent
         assert!(!is_install_upgrade::get(&matches));
+    }
+
+    #[test]
+    fn test_is_min_bid_override_accepted() {
+        // Simulate running with the `--install-upgrade` flag
+        let matches = build_withdraw()
+            .try_get_matches_from(vec!["put-transaction withdraw-bid", "--min-bid-override"])
+            .unwrap();
+
+        // Assert that `get` returns true when the flag is present
+        assert!(min_bid_override::get(&matches));
     }
 }

@@ -341,7 +341,13 @@ pub async fn put_deploy_with_min_bid_override(
     let rpc_id = parse::rpc_id(maybe_rpc_id);
     let verbosity = parse::verbosity(verbosity_level);
     let deploy = with_payment_and_session(deploy_params, payment_params, session_params, false)?;
-    do_deploy_checks(node_address, min_bid_override, &deploy).await?;
+    if let Err(err) = do_deploy_checks(node_address, min_bid_override, &deploy).await {
+        if !min_bid_override {
+            return Err(err)
+        } else {
+            println!("[WARN]: Skipping withdraw bid amount checks: {}", err)
+        }
+    };
     #[allow(deprecated)]
     crate::put_deploy(rpc_id, node_address, verbosity, deploy)
         .await
