@@ -9,6 +9,36 @@ All notable changes to this project will be documented in this file.  The format
 [comment]: <> (Fixed:      any bug fixes)
 [comment]: <> (Security:   in case of vulnerabilities)
 
+## 5.0.0
+
+### Modified
+
+* Extended the guardrails of checking the amount during a bid withdrawal to the following subcommand
+  * `put-transaction invocable-entity`
+  * `put-transaction invocable-alias`
+  * `put-transaction package`
+  * `put-tranasaction package-alias`
+  * `put-deploy`
+* The `put-deploy` guardrails only apply to invocations of the auction by hash or name, or via the auction package by contract package hash/name
+
+
+* Added the `min-bid-override` flag to the following commands
+  * `put-transaction invocable-entity`
+  * `put-transaction invocable-alias`
+  * `put-transaction package`
+  * `put-tranasaction package-alias`
+  * `put-deploy`
+
+Providing the `--min-bid-override` flag to any of the subcommands will override the amount check from erroring.
+Additionally, the flag will also suprress any errors pertaining to checking the amount being withdrawn and return them as messages to `stdout`
+
+
+## 4.0.1 
+
+### Fixed
+
+* Fixed an issue in `withdraw-bid` subcommand that would cause a runtime panic when the command would not deserialize the chainspec
+
 ## 4.0.0
 
 ### Added
