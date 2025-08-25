@@ -10,7 +10,7 @@ use crate::{
     cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder},
     put_transaction as put_transaction_rpc_handler,
     rpcs::results::PutTransactionResult,
-    SuccessResponse,
+    SuccessResponse, Verbosity,
 };
 use casper_types::{
     Digest, InitiatorAddr, Key, PublicKey, SecretKey, Transaction, TransactionArgs,
@@ -640,7 +640,7 @@ async fn check_auction_state_for_withdraw(
 
                     do_amount_checks
                 }
-                _ => false,
+                _ => return Ok(()),
             };
             if do_amount_checks {
                 let args = transaction_v1
@@ -669,7 +669,7 @@ async fn check_auction_state_for_withdraw(
                     do_withdraw_amount_checks(node_address, 0, public_key, amount, min_bid_override)
                         .await?
                 }
-            } else {
+            } else if verbosity_level == Verbosity::High as u64 {
                 println!("Skipping amount checks for withdraw bid")
             }
         }
