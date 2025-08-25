@@ -6,7 +6,12 @@ use crate::read_transaction_file;
 use crate::rpcs::v2_0_0::speculative_exec_transaction::SpeculativeExecTxnResult;
 #[cfg(feature = "std-fs-io")]
 use crate::speculative_exec_txn;
-use crate::{cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder}, put_transaction as put_transaction_rpc_handler, rpcs::results::PutTransactionResult, SuccessResponse, Verbosity};
+use crate::{
+    cli::{parse, CliError, TransactionBuilderParams, TransactionStrParams, TransactionV1Builder},
+    put_transaction as put_transaction_rpc_handler,
+    rpcs::results::PutTransactionResult,
+    SuccessResponse, Verbosity,
+};
 use casper_types::{
     Digest, InitiatorAddr, Key, PublicKey, SecretKey, Transaction, TransactionArgs,
     TransactionEntryPoint, TransactionInvocationTarget, TransactionRuntimeParams,
