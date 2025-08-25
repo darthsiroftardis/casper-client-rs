@@ -640,7 +640,7 @@ async fn check_auction_state_for_withdraw(
 
                     do_amount_checks
                 }
-                _ => false,
+                _ => return Ok(()),
             };
             if do_amount_checks {
                 let args = transaction_v1
