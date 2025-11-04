@@ -733,6 +733,10 @@ pub(super) fn global_state_identifier(
     maybe_block_id: &str,
     maybe_state_root_hash: &str,
 ) -> Result<Option<GlobalStateIdentifier>, CliError> {
+    if maybe_state_root_hash.is_empty() && maybe_block_id.is_empty() {
+        return Ok(None);
+    }
+
     match block_identifier(maybe_block_id)? {
         Some(BlockIdentifier::Hash(hash)) => {
             return Ok(Some(GlobalStateIdentifier::BlockHash(hash)))
