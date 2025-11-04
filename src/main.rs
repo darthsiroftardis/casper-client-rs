@@ -113,7 +113,7 @@ enum DisplayOrder {
     ListRpcs,
     Keygen,
     AccountAddress,
-    GenerateCompletion
+    GenerateCompletion,
 }
 
 fn cli() -> Command {
