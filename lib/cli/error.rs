@@ -13,7 +13,7 @@ pub use uint::FromDecStrErr;
 
 use crate::cli::JsonArgsError;
 #[cfg(doc)]
-use crate::rpcs::{DictionaryItemIdentifier, GlobalStateIdentifier};
+use crate::rpcs::{DictionaryItemIdentifier};
 
 /// Error that can be returned by the `cli` API.
 #[derive(Error, Debug)]
