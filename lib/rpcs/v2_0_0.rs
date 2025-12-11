@@ -89,11 +89,10 @@ pub(crate) mod put_deploy {
     pub(crate) use crate::rpcs::v1_6_0::put_deploy::{PutDeployParams, PUT_DEPLOY_METHOD};
 }
 
-pub(crate) mod query_global_state {
-    pub use crate::rpcs::v1_6_0::query_global_state::{
-        GlobalStateIdentifier, QueryGlobalStateResult,
-    };
+pub mod query_global_state {
     pub(crate) use crate::rpcs::v1_6_0::query_global_state::{
         QueryGlobalStateParams, QUERY_GLOBAL_STATE_METHOD,
     };
+
+    pub use crate::rpcs::v1_6_0::query_global_state::QueryGlobalStateResult;
 }

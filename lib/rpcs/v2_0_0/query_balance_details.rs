@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use casper_types::{BlockTime, ProtocolVersion, U512};
 
-use crate::rpcs::{GlobalStateIdentifier, PurseIdentifier};
+use crate::rpcs::{common::GlobalStateIdentifier, PurseIdentifier};
 
 pub(crate) const QUERY_BALANCE_DETAILS_METHOD: &str = "query_balance_details";
 

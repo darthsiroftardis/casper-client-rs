@@ -2,8 +2,9 @@
 
 pub(crate) mod get_account;
 
-// The following RPCs are all unchanged from v1.5.0, so we just re-export them.
+pub mod query_global_state;
 
+// The following RPCs are all unchanged from v1.5.0, so we just re-export them.
 pub(crate) mod get_chainspec {
     pub use crate::rpcs::v1_5_0::get_chainspec::GetChainspecResult;
     pub(crate) use crate::rpcs::v1_5_0::get_chainspec::GET_CHAINSPEC_METHOD;
@@ -108,13 +109,4 @@ pub(crate) mod list_rpcs {
 pub(crate) mod put_deploy {
     pub use crate::rpcs::v1_5_0::put_deploy::PutDeployResult;
     pub(crate) use crate::rpcs::v1_5_0::put_deploy::{PutDeployParams, PUT_DEPLOY_METHOD};
-}
-
-pub(crate) mod query_global_state {
-    pub use crate::rpcs::v1_5_0::query_global_state::{
-        GlobalStateIdentifier, QueryGlobalStateResult,
-    };
-    pub(crate) use crate::rpcs::v1_5_0::query_global_state::{
-        QueryGlobalStateParams, QUERY_GLOBAL_STATE_METHOD,
-    };
 }
